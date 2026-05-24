@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // GitHub Pages base path for this repo
+  base: '/medibank-nexus/',
+
   plugins: [
     react(),
 
@@ -21,8 +24,8 @@ export default defineConfig({
         background_color: '#ffffff',
         display:          'standalone',
         orientation:      'portrait-primary',
-        start_url:        '/',
-        scope:            '/',
+        start_url:        '/medibank-nexus/',
+        scope:            '/medibank-nexus/',
         icons: [
           {
             src:     'icons/icon-192.png',
@@ -41,13 +44,13 @@ export default defineConfig({
           {
             name:        'Register Patient',
             short_name:  'Register',
-            url:         '/?page=register',
+            url:         '/medibank-nexus/?page=register',
             description: 'Register a new patient',
           },
           {
             name:        'Pharmacy Queue',
             short_name:  'Pharmacy',
-            url:         '/?page=pharmacy',
+            url:         '/medibank-nexus/?page=pharmacy',
             description: 'Open the Rx dispensing queue',
           },
         ],
