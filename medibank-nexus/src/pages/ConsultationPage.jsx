@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useToast }  from '../components/Toast';
 import { useAppCtx } from '../context/AppContext';
 import { api }       from '../lib/api';
@@ -173,6 +174,8 @@ function RxRow({ rx, onChange, onRemove, patient }) {
 export default function ConsultationPage() {
   const toast        = useToast();
   const { navigate } = useAppCtx();
+  const [searchParams] = useSearchParams();
+  const patientIdParam = searchParams.get('patientId');
 
   /* Patient search */
   const [searchQ,    setSearchQ]    = useState('');
@@ -225,6 +228,23 @@ export default function ConsultationPage() {
       }));
     } catch { /* history stays empty */ }
   };
+
+  /* Automatically load patient from query param if provided */
+  useEffect(() => {
+    if (patientIdParam) {
+      const loadPatient = async () => {
+        try {
+          const res = await api.get(`/api/v1/patients/${patientIdParam}`);
+          if (res?.patient) {
+            selectPatient(normalisePatient(res.patient));
+          }
+        } catch (err) {
+          console.error('[Consultation] Failed to load patient from query param:', err);
+        }
+      };
+      loadPatient();
+    }
+  }, [patientIdParam]);
 
   const updateVital = (k, v) => setVitals(prev => ({ ...prev, [k]: v }));
   const updateRx    = (id, updated) => setRxList(prev => prev.map(r => r.id === id ? updated : r));

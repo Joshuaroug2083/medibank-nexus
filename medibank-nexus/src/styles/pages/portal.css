@@ -1,0 +1,280 @@
+/* ============================================================
+   PATIENT PORTAL  (added Step 12)
+   ============================================================ */
+.portal-root { max-width: 820px; }
+
+.portal-profile-card {
+  background: linear-gradient(135deg, var(--primary) 0%, #0855a0 55%, var(--teal) 130%);
+  border-radius: var(--radius-2xl);
+  padding: 24px;
+  display: flex;
+  gap: 18px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-blue);
+  position: relative;
+  overflow: hidden;
+}
+.portal-profile-card::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.06);
+  pointer-events: none;
+}
+.portal-avatar {
+  width: 62px; height: 62px;
+  border-radius: var(--radius-xl);
+  background: rgba(255,255,255,.18);
+  border: 2px solid rgba(255,255,255,.3);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+.portal-stats-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.portal-stat-chip {
+  padding: 7px 13px;
+  background: rgba(255,255,255,.13);
+  border: 1px solid rgba(255,255,255,.22);
+  border-radius: var(--radius-lg);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.portal-contact-panel {
+  margin-left: auto;
+  padding: 12px 14px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: var(--radius-lg);
+  min-width: 200px;
+  flex-shrink: 0;
+}
+
+.portal-allergy-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--danger-light);
+  border: 1px solid #fca5a5;
+  color: var(--danger);
+  border-radius: var(--radius-full);
+  font-size: .76rem;
+  font-weight: 700;
+}
+.portal-condition-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--warning-light);
+  border: 1px solid #fde68a;
+  color: var(--warning);
+  border-radius: var(--radius-full);
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.portal-tabs {
+  display: flex;
+  gap: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  margin-bottom: 18px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.portal-tabs::-webkit-scrollbar { display: none; }
+.portal-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: .81rem;
+  font-weight: 600;
+  color: var(--text-500);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: var(--font);
+  transition: all var(--t-fast) var(--ease);
+  white-space: nowrap;
+}
+.portal-tab svg   { width: 13px; height: 13px; flex-shrink: 0; }
+.portal-tab:hover { color: var(--primary); background: white; }
+.portal-tab.active {
+  color: var(--primary);
+  background: white;
+  box-shadow: var(--shadow-sm);
+  font-weight: 700;
+}
+
+.portal-timeline { display: flex; flex-direction: column; gap: 0; }
+.timeline-item   { display: flex; gap: 0; }
+.timeline-date-col {
+  width: 52px;
+  flex-shrink: 0;
+  text-align: center;
+  padding-top: 4px;
+}
+.timeline-month { font-size: .68rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: .05em; }
+.timeline-day   { font-size: 1.35rem; font-weight: 900; color: var(--text-900); line-height: 1; }
+.timeline-year  { font-size: .66rem; color: var(--text-400); }
+
+.timeline-connector {
+  width: 28px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 6px;
+}
+.timeline-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--border-dark);
+  border: 2px solid white;
+  box-shadow: 0 0 0 2px var(--border-dark);
+  flex-shrink: 0;
+  z-index: 1;
+}
+.timeline-dot.latest {
+  background: var(--primary);
+  box-shadow: 0 0 0 3px rgba(10,110,189,.2);
+  animation: pulse 2s infinite;
+}
+.timeline-line {
+  flex: 1;
+  width: 2px;
+  background: var(--border);
+  margin-top: 4px;
+  min-height: 30px;
+}
+.timeline-card {
+  flex: 1;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  margin-left: 6px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--t) var(--ease);
+}
+.timeline-card:hover { box-shadow: var(--shadow-md); }
+.timeline-expanded {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.vitals-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.vital-mini-cell {
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.portal-info-block { margin-bottom: 10px; }
+.portal-info-label {
+  font-size: .69rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-400);
+  margin-bottom: 4px;
+}
+.portal-info-value { font-size: .83rem; color: var(--text-700); line-height: 1.6; }
+
+.rx-mini-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: .79rem;
+  color: var(--text-700);
+  border-bottom: 1px solid var(--border);
+}
+.rx-mini-row:last-child { border-bottom: none; }
+
+.rx-portal-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  border-radius: var(--radius-xl);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  animation: fadeUp var(--t-slow) var(--ease) both;
+}
+.rx-portal-header { display: flex; justify-content: space-between; align-items: flex-start; }
+.rx-drug-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.rx-pill-icon {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: var(--teal-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--teal);
+}
+
+.appt-portal-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: var(--shadow-sm);
+  animation: fadeUp var(--t-slow) var(--ease) both;
+  transition: all var(--t) var(--ease);
+}
+.appt-portal-card:hover      { box-shadow: var(--shadow-md); }
+.appt-portal-card.upcoming   { border-left: 4px solid var(--primary); }
+.appt-date-badge {
+  width: 52px; height: 58px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .portal-contact-panel { width: 100%; min-width: unset; }
+}

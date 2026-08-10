@@ -21,6 +21,8 @@ import db            from '../db.js';
 import authenticate  from '../middleware/auth.js';
 import { allow }     from '../middleware/rbac.js';
 import { audit }     from '../middleware/audit.js';
+import { decrypt, mask } from '../security/encryption.js';
+import { getPatientIdForUser } from './patients.js';
 
 const router = Router();
 router.use(authenticate);
@@ -29,7 +31,7 @@ router.use(authenticate);
    WARDS
 ══════════════════════════════════════ */
 
-router.get('/wards', async (req, res, next) => {
+router.get('/wards', allow('admin', 'nurse', 'doctor', 'pharmacist'), async (req, res, next) => {
   try {
     const wards = await db('wards')
       .where({ hospital_id: req.hospitalId, status: 'active' })
@@ -71,7 +73,7 @@ router.post('/wards', allow('admin'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-router.get('/wards/:id/beds', async (req, res, next) => {
+router.get('/wards/:id/beds', allow('admin', 'nurse', 'doctor', 'pharmacist'), async (req, res, next) => {
   try {
     const ward = await db('wards').where({ id: req.params.id, hospital_id: req.hospitalId }).first();
     if (!ward) return res.status(404).json({ error: 'Ward not found' });
@@ -158,8 +160,28 @@ router.get('/admissions', async (req, res, next) => {
     if (status) q = q.where('a.status', status);
     if (wardId) q = q.where('a.ward_id', wardId);
 
+    /* Restrict patient role to own admissions */
+    if (req.user.role === 'patient') {
+      const ptId = await getPatientIdForUser(req.user.id, req.user.email, req.hospitalId);
+      if (ptId) {
+        q = q.where('a.patient_id', ptId);
+      } else {
+        q = q.whereRaw('1=0');
+      }
+    }
+
     const [{ count }] = await q.clone().count('a.id as count');
     const admissions  = await q.orderBy('a.admitted_at', 'desc').limit(limit).offset(offset);
+
+    // Decrypt and mask phone based on role
+    for (const adm of admissions) {
+      if (adm.patient_phone) {
+        const decryptedPhone = decrypt(adm.patient_phone);
+        adm.patient_phone = req.user.role === 'pharmacist'
+          ? (decryptedPhone ? mask(decryptedPhone.replace(/\s/g,''), 4) : null)
+          : decryptedPhone;
+      }
+    }
 
     return res.json({ admissions, total: parseInt(count), page: +page, limit: +limit });
   } catch (err) { next(err); }
@@ -220,6 +242,21 @@ router.get('/admissions/:id', async (req, res, next) => {
       .first();
 
     if (!admission) return res.status(404).json({ error: 'Admission not found' });
+
+    /* Restrict patient role to own admission */
+    if (req.user.role === 'patient') {
+      const ptId = await getPatientIdForUser(req.user.id, req.user.email, req.hospitalId);
+      if (!ptId || admission.patient_id !== ptId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
+
+    if (admission.patient_phone) {
+      const decryptedPhone = decrypt(admission.patient_phone);
+      admission.patient_phone = req.user.role === 'pharmacist'
+        ? (decryptedPhone ? mask(decryptedPhone.replace(/\s/g,''), 4) : null)
+        : decryptedPhone;
+    }
 
     admission.nursing_notes = await db('nursing_notes as n')
       .join('users as u', 'u.id', 'n.nurse_id')

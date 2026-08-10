@@ -5,7 +5,7 @@
 /* ── Wards ── */
 CREATE TABLE IF NOT EXISTS wards (
   id          SERIAL PRIMARY KEY,
-  hospital_id INTEGER NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+  hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
   name        TEXT    NOT NULL,
   ward_type   TEXT    NOT NULL DEFAULT 'general'
               CHECK (ward_type IN ('general','icu','maternity','paediatric','surgical','private','emergency')),
@@ -21,7 +21,7 @@ CREATE INDEX IF NOT EXISTS idx_wards_hospital ON wards(hospital_id);
 /* ── Beds ── */
 CREATE TABLE IF NOT EXISTS beds (
   id          SERIAL PRIMARY KEY,
-  hospital_id INTEGER NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+  hospital_id UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
   ward_id     INTEGER NOT NULL REFERENCES wards(id) ON DELETE CASCADE,
   bed_number  TEXT    NOT NULL,
   status      TEXT    NOT NULL DEFAULT 'available'
@@ -38,13 +38,13 @@ CREATE INDEX IF NOT EXISTS idx_beds_ward     ON beds(ward_id);
 /* ── Admissions ── */
 CREATE TABLE IF NOT EXISTS admissions (
   id              SERIAL PRIMARY KEY,
-  hospital_id     INTEGER NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
-  patient_id      INTEGER NOT NULL REFERENCES patients(id),
+  hospital_id     UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+  patient_id      TEXT NOT NULL REFERENCES patients(id),
   bed_id          INTEGER REFERENCES beds(id),
   ward_id         INTEGER REFERENCES wards(id),
-  visit_id        INTEGER REFERENCES visits(id),
-  admitted_by     INTEGER REFERENCES users(id),
-  attending_doctor INTEGER REFERENCES users(id),
+  visit_id        TEXT REFERENCES visits(id),
+  admitted_by     UUID REFERENCES users(id),
+  attending_doctor UUID REFERENCES users(id),
   admitted_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   discharged_at   TIMESTAMPTZ,
   discharge_notes TEXT,
@@ -61,11 +61,11 @@ CREATE INDEX IF NOT EXISTS idx_admissions_status    ON admissions(status);
 /* ── Nursing Notes ── */
 CREATE TABLE IF NOT EXISTS nursing_notes (
   id           SERIAL PRIMARY KEY,
-  hospital_id  INTEGER NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
-  patient_id   INTEGER NOT NULL REFERENCES patients(id),
+  hospital_id  UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+  patient_id   TEXT NOT NULL REFERENCES patients(id),
   admission_id INTEGER REFERENCES admissions(id),
-  visit_id     INTEGER REFERENCES visits(id),
-  nurse_id     INTEGER NOT NULL REFERENCES users(id),
+  visit_id     TEXT REFERENCES visits(id),
+  nurse_id     UUID NOT NULL REFERENCES users(id),
   note_type    TEXT NOT NULL DEFAULT 'general'
                CHECK (note_type IN ('general','vital_signs','intake_output','handover','incident','assessment')),
   content      TEXT NOT NULL,
@@ -78,8 +78,8 @@ CREATE INDEX IF NOT EXISTS idx_nursing_notes_admission ON nursing_notes(admissio
 /* ── Medication Administration Record (MAR) ── */
 CREATE TABLE IF NOT EXISTS mar_records (
   id             SERIAL PRIMARY KEY,
-  hospital_id    INTEGER NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
-  patient_id     INTEGER NOT NULL REFERENCES patients(id),
+  hospital_id    UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+  patient_id     TEXT NOT NULL REFERENCES patients(id),
   admission_id   INTEGER REFERENCES admissions(id),
   drug_name      TEXT    NOT NULL,
   dose           TEXT    NOT NULL,
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS mar_records (
   frequency      TEXT    NOT NULL,
   scheduled_at   TIMESTAMPTZ NOT NULL,
   administered_at TIMESTAMPTZ,
-  administered_by INTEGER REFERENCES users(id),
+  administered_by UUID REFERENCES users(id),
   status         TEXT NOT NULL DEFAULT 'scheduled'
                  CHECK (status IN ('scheduled','given','omitted','refused','held')),
   omission_reason TEXT,
@@ -101,15 +101,15 @@ CREATE INDEX IF NOT EXISTS idx_mar_admission ON mar_records(admission_id);
 /* ── Referrals ── */
 CREATE TABLE IF NOT EXISTS referrals (
   id               SERIAL PRIMARY KEY,
-  hospital_id      INTEGER NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
-  patient_id       INTEGER NOT NULL REFERENCES patients(id),
-  visit_id         INTEGER REFERENCES visits(id),
+  hospital_id      UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+  patient_id       TEXT NOT NULL REFERENCES patients(id),
+  visit_id         TEXT REFERENCES visits(id),
   referral_type    TEXT NOT NULL DEFAULT 'internal'
                    CHECK (referral_type IN ('internal','external')),
   from_dept        TEXT,
-  from_doctor_id   INTEGER REFERENCES users(id),
+  from_doctor_id   UUID REFERENCES users(id),
   to_dept          TEXT,                       -- internal referral
-  to_doctor_id     INTEGER REFERENCES users(id), -- internal
+  to_doctor_id     UUID REFERENCES users(id), -- internal
   to_hospital_name TEXT,                       -- external referral
   to_specialist    TEXT,                       -- external
   reason           TEXT NOT NULL,
@@ -131,8 +131,8 @@ CREATE INDEX IF NOT EXISTS idx_referrals_status   ON referrals(status);
 /* ── NDPR Data Subject Requests ── */
 CREATE TABLE IF NOT EXISTS data_subject_requests (
   id              SERIAL PRIMARY KEY,
-  hospital_id     INTEGER NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
-  patient_id      INTEGER REFERENCES patients(id),
+  hospital_id     UUID NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+  patient_id      TEXT REFERENCES patients(id),
   request_type    TEXT NOT NULL
                   CHECK (request_type IN ('access','erasure','portability','rectification','objection')),
   requester_name  TEXT NOT NULL,
@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS data_subject_requests (
   description     TEXT,
   status          TEXT NOT NULL DEFAULT 'pending'
                   CHECK (status IN ('pending','in_review','completed','rejected')),
-  handled_by      INTEGER REFERENCES users(id),
+  handled_by      UUID REFERENCES users(id),
   response_notes  TEXT,
   due_date        TIMESTAMPTZ NOT NULL,     -- NDPR: respond within 1 month
   completed_at    TIMESTAMPTZ,

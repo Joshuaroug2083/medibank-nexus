@@ -3,6 +3,8 @@ import db           from '../db.js';
 import authenticate from '../middleware/auth.js';
 import { allow }    from '../middleware/rbac.js';
 import { audit }    from '../middleware/audit.js';
+import { decrypt, mask } from '../security/encryption.js';
+import { getPatientIdForUser } from './patients.js';
 
 const router = Router();
 router.use(authenticate);
@@ -40,10 +42,12 @@ router.get('/', async (req, res, next) => {
 
     /* Patients can only see their own appointments */
     if (req.user.role === 'patient') {
-      const patient = await db('patients')
-        .where({ email: req.user.email, hospital_id: req.hospitalId })
-        .first();
-      if (patient) query = query.where('a.patient_id', patient.id);
+      const ptId = await getPatientIdForUser(req.user.id, req.user.email, req.hospitalId);
+      if (ptId) {
+        query = query.where('a.patient_id', ptId);
+      } else {
+        query = query.whereRaw('1=0');
+      }
     }
 
     /* Doctors only see their own schedule */
@@ -53,6 +57,16 @@ router.get('/', async (req, res, next) => {
 
     const [{ count }] = await query.clone().count('a.id as count');
     const appointments = await query.orderBy('a.date','asc').orderBy('a.time','asc').limit(limit).offset(offset);
+
+    // Decrypt and mask phone based on role
+    for (const appt of appointments) {
+      if (appt.patient_phone) {
+        const decryptedPhone = decrypt(appt.patient_phone);
+        appt.patient_phone = req.user.role === 'pharmacist'
+          ? (decryptedPhone ? mask(decryptedPhone.replace(/\s/g,''), 4) : null)
+          : decryptedPhone;
+      }
+    }
 
     return res.json({ appointments, total: parseInt(count), page: +page, limit: +limit });
   } catch (err) {

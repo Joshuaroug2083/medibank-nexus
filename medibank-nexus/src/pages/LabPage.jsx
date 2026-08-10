@@ -260,6 +260,9 @@ export default function LabPage() {
   const { user }   = useAuth();
   const [orders,   setOrders]   = useState([]);
   const [loading,  setLoading]  = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore,   setHasMore]   = useState(true);
+  const [page,      setPage]      = useState(1);
   const [search,   setSearch]   = useState('');
   const [status,   setStatus]   = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -267,19 +270,38 @@ export default function LabPage() {
   const canOrder  = ['doctor','nurse'].includes(user.role);
   const canResult = ['nurse','doctor','admin'].includes(user.role);
 
+  const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, status]);
+
   const load = useCallback(async () => {
-    setLoading(true);
+    if (page === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
     try {
-      const params = new URLSearchParams({ limit: 60 });
+      const offset = (page - 1) * PAGE_SIZE;
+      const params = new URLSearchParams({ limit: PAGE_SIZE, offset });
       if (search) params.set('q', search);
       if (status) params.set('status', status);
       const r = await api.get(`/api/v1/lab/orders?${params}`);
-      setOrders(r.orders ?? []);
-    } catch { setOrders([]); }
-    finally { setLoading(false); }
-  }, [search, status]);
+      const newOrders = r.orders ?? [];
+      setOrders(prev => page === 1 ? newOrders : [...prev, ...newOrders]);
+      setHasMore(newOrders.length === PAGE_SIZE);
+    } catch {
+      if (page === 1) setOrders([]);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [search, status, page]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const updateStatus = async (id, newStatus) => {
     try {
@@ -393,6 +415,14 @@ export default function LabPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {hasMore && orders.length > 0 && (
+        <div style={{ textAlign: 'center', marginTop: 20 }}>
+          <button className="btn btn-outline" onClick={() => setPage(p => p + 1)} disabled={loadingMore}>
+            {loadingMore ? 'Loading...' : 'Load More'}
+          </button>
         </div>
       )}
 

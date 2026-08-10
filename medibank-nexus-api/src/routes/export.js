@@ -9,6 +9,7 @@ import { Router } from 'express';
 import db           from '../db.js';
 import authenticate from '../middleware/auth.js';
 import { allow }    from '../middleware/rbac.js';
+import { decryptPatient } from '../security/encryption.js';
 
 const router = Router();
 router.use(authenticate);
@@ -38,11 +39,22 @@ router.get('/patients', async (req, res, next) => {
   try {
     const rows = await db('patients')
       .where({ hospital_id: req.hospitalId })
-      .orderBy('registered_at', 'desc')
-      .select('id','name','dob','gender','phone','email','blood_group','genotype',
-              'insurance_provider','insurance_number','state','registered_at');
+      .orderBy('created_at', 'desc')
+      .select('id','first_name','last_name','dob','gender','phone','email','blood_group','genotype',
+              'insurance','ins_number','state','created_at');
 
-    const csv = toCSV(rows, [
+    const decryptedRows = rows.map(row => {
+      const p = decryptPatient(row);
+      return {
+        ...p,
+        name: `${p.first_name} ${p.last_name}`,
+        registered_at: p.created_at,
+        insurance_provider: p.insurance,
+        insurance_number: p.ins_number,
+      };
+    });
+
+    const csv = toCSV(decryptedRows, [
       { key: 'id',                 label: 'Patient ID'       },
       { key: 'name',               label: 'Full Name'        },
       { key: 'dob',                label: 'Date of Birth'    },
@@ -68,7 +80,7 @@ router.get('/invoices', async (req, res, next) => {
     let query = db('invoices as i')
       .join('patients as p', 'i.patient_id', 'p.id')
       .where('i.hospital_id', req.hospitalId)
-      .select('i.id','p.name as patient_name','i.status','i.total','i.paid','i.balance',
+      .select('i.id', db.raw("p.first_name || ' ' || p.last_name as patient_name"), 'i.status','i.total','i.paid','i.balance',
               'i.created_at','i.updated_at');
 
     if (from) query = query.where('i.created_at', '>=', from);
@@ -97,7 +109,7 @@ router.get('/appointments', async (req, res, next) => {
       .join('patients as p', 'a.patient_id', 'p.id')
       .join('users as d',    'a.doctor_id',  'd.id')
       .where('a.hospital_id', req.hospitalId)
-      .select('a.id','p.name as patient','d.name as doctor','a.scheduled_at',
+      .select('a.id', db.raw("p.first_name || ' ' || p.last_name as patient"), 'd.name as doctor','a.scheduled_at',
               'a.status','a.visit_type','a.notes')
       .orderBy('a.scheduled_at', 'desc')
       .limit(5000);

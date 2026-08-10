@@ -58,7 +58,9 @@ import formularyRoutes    from './routes/formulary.js';
 import inpatientRoutes    from './routes/inpatient.js';
 import referralRoutes     from './routes/referrals.js';
 import complianceRoutes   from './routes/compliance.js';
+import sseRoutes          from './routes/sse.js';
 import { startReminderJob } from './jobs/reminderJob.js';
+import { errorHandler } from './middleware/errorHandler.js';
 
 const app  = express();
 const PORT = process.env.PORT ?? 3001;
@@ -116,6 +118,9 @@ app.use(xssSanitizer);          // strip <script>, JS handlers
 app.use(hppProtection);         // block parameter pollution
 app.use(deepSanitizer);         // null bytes, control chars, path traversal
 app.use(enforceJsonContentType);// reject non-JSON write requests
+
+/* SSE route must bypass enforceJsonContentType (it's a GET, but belt-and-suspenders) */
+app.use('/api/v1/sse', sseRoutes);
 
 /* ════════════════════════════════════════════════════════════════
    LAYER 9 — GLOBAL RATE LIMITER
@@ -181,26 +186,7 @@ app.use((_req, res) => res.status(404).json({ error: 'Endpoint not found' }));
    GLOBAL ERROR HANDLER
    IMPORTANT: Never leak stack traces or internal details in production
 ════════════════════════════════════════════════════════════════ */
-app.use((err, req, res, _next) => {
-  /* CORS errors */
-  if (err.message?.startsWith('CORS:')) {
-    return res.status(403).json({ error: err.message });
-  }
-
-  const status = err.status ?? err.statusCode ?? 500;
-
-  /* Log full error server-side */
-  console.error(`[ERROR] ${req.method} ${req.path} — ${err.message}`);
-  if (status === 500) console.error(err.stack);
-
-  /* Client response: never expose internals in production */
-  return res.status(status).json({
-    error: isProd && status === 500
-      ? 'An unexpected error occurred. Please try again.'
-      : err.message,
-    ...(isProd ? {} : { stack: err.stack }),
-  });
-});
+app.use(errorHandler);
 
 /* ════════════════════════════════════════════════════════════════
    STARTUP

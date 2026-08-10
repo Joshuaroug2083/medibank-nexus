@@ -1,0 +1,91 @@
+/* ============================================================
+   REGISTER PAGE  (added Step 7)
+   ============================================================ */
+.reg-page { max-width: 820px; }
+
+/* Step section header */
+.reg-step-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+.reg-step-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.reg-step-title { font-size: 1rem; font-weight: 800; color: var(--text-900); }
+.reg-step-sub   { font-size: .8rem; color: var(--text-400); margin-top: 3px; }
+
+/* Patient ID banner */
+.patient-id-banner {
+  background: linear-gradient(135deg, var(--primary) 0%, #0855a0 60%, var(--teal) 130%);
+  color: white;
+  border-radius: var(--radius-xl);
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+  box-shadow: var(--shadow-blue);
+}
+
+/* Review sections */
+.review-section {
+  margin-bottom: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.review-section-title {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-400);
+  padding: 9px 14px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.review-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: .84rem;
+}
+.review-row:last-child { border-bottom: none; }
+.review-label  { color: var(--text-500); font-weight: 500; flex-shrink: 0; min-width: 130px; }
+.review-value  { color: var(--text-700); font-weight: 600; text-align: right; }
+.review-danger { color: var(--danger); font-weight: 700; }
+
+/* Success screen */
+.reg-success {
+  max-width: 480px;
+  margin: 60px auto;
+  text-align: center;
+  padding: 0 16px;
+}
+.reg-success-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-2xl);
+  background: var(--success-light);
+  color: var(--success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  box-shadow: 0 0 0 8px rgba(5,150,105,.1);
+}
+.reg-success-title { font-size: 1.6rem; font-weight: 900; letter-spacing: -.03em; margin-bottom: 8px; }
+.reg-success-sub   { font-size: .9rem; color: var(--text-500); line-height: 1.7; margin-bottom: 4px; }

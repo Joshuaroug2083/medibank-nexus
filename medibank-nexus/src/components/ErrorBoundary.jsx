@@ -12,7 +12,11 @@ import { Component } from 'react';
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = {
+      hasError: false,
+      error: null,
+      isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true
+    };
   }
 
   static getDerivedStateFromError(error) {
@@ -23,8 +27,23 @@ export default class ErrorBoundary extends Component {
     console.error('[ErrorBoundary]', error, info.componentStack);
   }
 
+  componentDidMount() {
+    window.addEventListener('online', this.handleConnectionChange);
+    window.addEventListener('offline', this.handleConnectionChange);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('online', this.handleConnectionChange);
+    window.removeEventListener('offline', this.handleConnectionChange);
+  }
+
+  handleConnectionChange = () => {
+    this.setState({ isOnline: navigator.onLine });
+  };
+
   render() {
-    if (!this.state.hasError) return this.props.children;
+    const { hasError, error, isOnline } = this.state;
+    if (!hasError) return this.props.children;
 
     return (
       <div style={{
@@ -45,16 +64,37 @@ export default class ErrorBoundary extends Component {
           boxShadow:    '0 4px 32px rgba(10,40,80,.10)',
           textAlign:    'center',
         }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 14 }}>⚠️</div>
+          <div style={{ fontSize: '2.5rem', marginBottom: 14 }}>
+            {!isOnline ? '🌐' : '⚠️'}
+          </div>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f1923', marginBottom: 8 }}>
-            Something went wrong
+            {!isOnline ? 'Connection Lost' : 'Something went wrong'}
           </h2>
           <p style={{ fontSize: '.85rem', color: '#4a6580', lineHeight: 1.7, marginBottom: 20 }}>
-            An unexpected error occurred in this section. Your data is safe.
-            Try refreshing the page or navigating back to the dashboard.
+            {!isOnline
+              ? 'You are currently offline. MediBank Nexus requires an active internet connection. Please check your connection and try again.'
+              : 'An unexpected error occurred in this section. Your data is safe. Try refreshing the page or navigating back to the dashboard.'}
           </p>
 
-          {import.meta.env.DEV && this.state.error && (
+          {!isOnline && (
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              background: '#fee2e2',
+              color: '#ef4444',
+              padding: '6px 12px',
+              borderRadius: 20,
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              marginBottom: 20
+            }}>
+              <span style={{ width: 6, height: 6, background: '#ef4444', borderRadius: '50%' }} />
+              Offline Mode
+            </div>
+          )}
+
+          {isOnline && import.meta.env.DEV && error && (
             <pre style={{
               background:   '#f8fafc',
               border:       '1px solid #e2e8f0',
@@ -67,7 +107,7 @@ export default class ErrorBoundary extends Component {
               maxHeight:    160,
               marginBottom: 20,
             }}>
-              {this.state.error.toString()}
+              {error.toString()}
             </pre>
           )}
 

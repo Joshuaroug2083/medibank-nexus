@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../../context/AuthContext';
 import {
-  IcShield, IcSearch, IcWarning, IcCheckCircle,
+  IcShield, IcSearch, IcWarning, IcCheckCircle, IcDownload,
 } from '../../components/Icons';
 
 const ACTION_COLORS = {
@@ -75,6 +75,51 @@ export default function TabAuditLog() {
 
   useEffect(() => { fetch(); }, [fetch]);
 
+  const exportLogs = async () => {
+    try {
+      const params = new URLSearchParams({ limit: 10000 });
+      if (filters.action) params.set('action', filters.action);
+      if (filters.entity) params.set('entity', filters.entity);
+      if (filters.from)   params.set('from',   filters.from);
+      if (filters.to)     params.set('to',     filters.to);
+
+      let exportData = [];
+      const res = await apiFetch(`/api/v1/compliance/audit-log?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        exportData = data.logs || [];
+      } else {
+        exportData = logs;
+      }
+
+      if (exportData.length === 0) return;
+
+      const headers = ['Timestamp', 'User Name', 'User Role', 'Action', 'Entity', 'Entity ID', 'IP Address'];
+      const rows = exportData.map(log => [
+        new Date(log.created_at).toISOString(),
+        log.user_name || 'anonymous',
+        log.user_role || '',
+        log.action,
+        log.entity || '',
+        log.entity_id || '',
+        log.ip || '',
+      ]);
+
+      const csvContent = "data:text/csv;charset=utf-8," 
+        + [headers.join(','), ...rows.map(r => r.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))].join('\n');
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `audit_log_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const p = (k, v) => { setFilters(f => ({ ...f, [k]: v })); setPage(1); };
 
   return (
@@ -84,9 +129,19 @@ export default function TabAuditLog() {
         <h3 style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-900)', margin: 0 }}>
           Audit Log
         </h3>
-        <span style={{ fontSize: '.76rem', color: 'var(--text-400)', marginLeft: 'auto' }}>
-          {total.toLocaleString()} events total
-        </span>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: '.76rem', color: 'var(--text-400)' }}>
+            {total.toLocaleString()} events total
+          </span>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={exportLogs}
+            disabled={loading || logs.length === 0}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <IcDownload width={13} height={13} /> Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Filters */}

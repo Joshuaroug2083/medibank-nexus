@@ -33,10 +33,12 @@ export default function StatCard({
   onClick,
   className = '',
   style,
+  /** Loading state */
+  loading = false,
 }) {
   return (
     <div
-      className={`stat-card${onClick ? ' cursor-pointer' : ''} ${className}`}
+      className={`stat-card${onClick ? ' cursor-pointer' : ''} ${className}${loading ? ' loading' : ''}`}
       style={{ '--stat-accent': color, animationDelay: `${delay}ms`, ...style }}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
@@ -54,24 +56,38 @@ export default function StatCard({
           </div>
         )}
 
-        {change && trend && (
-          <div className={`stat-change ${trend}`} aria-label={`${trend === 'up' ? 'Increased' : 'Decreased'} by ${change}`}>
-            {trend === 'up'
-              ? <IcArrowUp  width={12} height={12} />
-              : <IcArrowDown width={12} height={12} />
-            }
-            {change}
-          </div>
+        {loading ? (
+          <div className="skeleton" style={{ width: 48, height: 16, borderRadius: 'var(--radius-sm)' }} />
+        ) : (
+          change && trend && (
+            <div className={`stat-change ${trend}`} aria-label={`${trend === 'up' ? 'Increased' : 'Decreased'} by ${change}`}>
+              {trend === 'up'
+                ? <IcArrowUp  width={12} height={12} />
+                : <IcArrowDown width={12} height={12} />
+              }
+              {change}
+            </div>
+          )
         )}
       </div>
 
       {/* Value */}
       <div className="stat-value" style={{ color }}>
-        {value}
+        {loading ? (
+          <div className="skeleton" style={{ width: '55%', height: 32, margin: '2px 0 6px', borderRadius: 'var(--radius-md)' }} />
+        ) : (
+          value
+        )}
       </div>
 
       {/* Label */}
-      <div className="stat-label">{label}</div>
+      <div className="stat-label">
+        {loading ? (
+          <div className="skeleton" style={{ width: '40%', height: 12, borderRadius: 'var(--radius-xs)' }} />
+        ) : (
+          label
+        )}
+      </div>
     </div>
   );
 }

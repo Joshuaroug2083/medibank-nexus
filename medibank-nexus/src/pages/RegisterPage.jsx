@@ -1,13 +1,4 @@
-{
-  "name": "MediBank Nexus",
-  "short_name": "Nexus",
-  "description": "Healthcare Management System",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2563eb",
-  "icons": []
-}/**
+/**
  * Step 7 — Patient Registration
  * 5-step wizard: Personal → Medical → Emergency → Insurance → Review & Submit
  */
@@ -618,14 +609,34 @@ export default function RegisterPage() {
         <p className="reg-success-sub">
           Record created successfully and is now available across all modules.
         </p>
-        <div className="patient-id-banner" style={{ maxWidth: 360, margin: '20px auto' }}>
-          <div>
-            <div style={{ fontSize: '.72rem', opacity: .75, marginBottom: 3 }}>Patient ID</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 900, letterSpacing: '.04em', fontFamily: 'var(--font-mono)' }}>
+        <div style={{
+          background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-xl)',
+          padding: '24px', maxWidth: 380, margin: '24px auto', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', gap: 14, boxShadow: 'var(--shadow-md)'
+        }}>
+          <div style={{ fontSize: '.72rem', color: 'var(--text-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+            Digital Health ID Card
+          </div>
+          <div style={{ background: 'white', padding: 12, borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-sm)' }}>
+            <img 
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(data.patientId)}`} 
+              alt={`QR Code for ${data.patientId}`}
+              width={140}
+              height={140}
+              style={{ display: 'block', borderRadius: 'var(--radius-sm)' }}
+            />
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '1.25rem', fontWeight: 900, letterSpacing: '.04em', fontFamily: 'var(--font-mono)', color: 'var(--primary)' }}>
               {data.patientId}
             </div>
+            <div style={{ fontSize: '.88rem', fontWeight: 700, color: 'var(--text-900)', marginTop: 4 }}>
+              {data.firstName} {data.lastName}
+            </div>
+            <div style={{ fontSize: '.74rem', color: 'var(--text-400)', marginTop: 2 }}>
+              Registered on {new Date().toLocaleDateString('en-NG')}
+            </div>
           </div>
-          <IcFileMedical width={24} height={24} style={{ opacity: .8 }} />
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button

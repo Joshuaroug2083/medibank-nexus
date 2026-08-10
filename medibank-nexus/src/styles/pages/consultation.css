@@ -1,0 +1,72 @@
+/* ============================================================
+   CONSULTATION PAGE  (added Step 8)
+   ============================================================ */
+.consult-root   { max-width: 1100px; }
+.consult-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.consult-sidebar { position: sticky; top: 16px; }
+
+.vitals-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.vital-cell  { display: flex; flex-direction: column; gap: 4px; }
+.vital-label { font-size: .75rem; font-weight: 700; color: var(--text-700); }
+.vital-input { font-family: var(--font-mono); font-size: .9rem !important; }
+
+.consult-tabs {
+  display: flex;
+  gap: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  margin-bottom: 12px;
+}
+.consult-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--text-500);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: var(--font);
+  transition: all var(--t-fast) var(--ease);
+}
+.consult-tab:hover  { color: var(--primary); background: white; }
+.consult-tab.active {
+  color: var(--primary);
+  background: white;
+  box-shadow: var(--shadow-sm);
+  font-weight: 700;
+}
+.consult-tab svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+.rx-row {
+  padding: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--t-fast);
+}
+.rx-row:hover { border-color: var(--border-dark); }
+
+@media (max-width: 900px) {
+  .consult-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .vitals-grid { grid-template-columns: repeat(2, 1fr); }
+}

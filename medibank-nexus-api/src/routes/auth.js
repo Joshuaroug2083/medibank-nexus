@@ -18,6 +18,7 @@ import {
   blacklistToken,
   revokeAllUserTokens,
   getUserRevocationTime,
+  isBlacklisted,
 }                   from '../security/tokenBlacklist.js';
 import { secureToken } from '../security/encryption.js';
 import { safeUser }    from '../security/dataFilter.js';
@@ -177,6 +178,22 @@ router.post('/refresh', authLimiter, async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid token type' });
     }
 
+    /* Check blacklist */
+    if (payload.jti) {
+      const blacklisted = await isBlacklisted(payload.jti);
+      if (blacklisted) {
+        return res.status(401).json({ error: 'Refresh token is invalid or expired' });
+      }
+    }
+
+    /* Check per-user revocation */
+    if (payload.sub && payload.iat) {
+      const revokedAt = await getUserRevocationTime(payload.sub);
+      if (revokedAt && payload.iat < revokedAt) {
+        return res.status(401).json({ error: 'Refresh token is invalid or expired' });
+      }
+    }
+
     const user = await db('users').where({ id: payload.sub }).first();
     if (!user || user.status === 'suspended') {
       return res.status(401).json({ error: 'User no longer active' });
@@ -204,6 +221,21 @@ router.post('/logout', authenticate, async (req, res, next) => {
     if (req.user.jti && req.user.exp) {
       await blacklistToken(req.user.jti, req.user.exp);
     }
+    /* Blacklist the refresh token if provided */
+    const { refreshToken } = req.body;
+    if (refreshToken) {
+      try {
+        const payload = jwt.verify(
+          refreshToken,
+          process.env.JWT_REFRESH_SECRET ?? process.env.JWT_SECRET + '_refresh',
+        );
+        if (payload.jti && payload.exp) {
+          await blacklistToken(payload.jti, payload.exp);
+        }
+      } catch (err) {
+        // ignore invalid refresh tokens on logout
+      }
+    }
     audit({ userId: req.user.id, hospitalId: req.hospitalId, action: 'logout', ip: req.ip });
     return res.json({ message: 'Logged out successfully' });
   } catch (err) {
@@ -218,6 +250,21 @@ router.post('/logout-all', authenticate, async (req, res, next) => {
     await revokeAllUserTokens(req.user.id);
     if (req.user.jti && req.user.exp) {
       await blacklistToken(req.user.jti, req.user.exp);
+    }
+    /* Blacklist the refresh token if provided */
+    const { refreshToken } = req.body;
+    if (refreshToken) {
+      try {
+        const payload = jwt.verify(
+          refreshToken,
+          process.env.JWT_REFRESH_SECRET ?? process.env.JWT_SECRET + '_refresh',
+        );
+        if (payload.jti && payload.exp) {
+          await blacklistToken(payload.jti, payload.exp);
+        }
+      } catch (err) {
+        // ignore invalid refresh tokens
+      }
     }
     audit({ userId: req.user.id, hospitalId: req.hospitalId, action: 'logout_all', ip: req.ip });
     return res.json({ message: 'Signed out from all devices' });

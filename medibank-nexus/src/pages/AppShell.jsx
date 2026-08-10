@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import { useAuth }         from '../context/AuthContext';
 import { useAppCtx }       from '../context/AppContext';
 import { useSettings }     from '../context/SettingsContext';
@@ -27,6 +28,7 @@ import FormularyPage   from './FormularyPage';
 import InpatientPage   from './InpatientPage';
 import ReferralsPage   from './ReferralsPage';
 import { api }         from '../lib/api';
+import { useSSE }      from '../hooks/useSSE';
 
 /* ── resolve icon by string name ── */
 const icon = (name, props = {}) => {
@@ -37,7 +39,7 @@ const icon = (name, props = {}) => {
 /* ════════════════════════════════════════════════════════════
    GLOBAL PATIENT SEARCH
 ════════════════════════════════════════════════════════════ */
-function GlobalSearch() {
+function GlobalSearch({ mobileFocus = false, onSelect }) {
   const { navigate } = useAppCtx();
   const { user }     = useAuth();
   const [q,          setQ]          = useState('');
@@ -68,13 +70,19 @@ function GlobalSearch() {
     }, 280);
   }, [q]);
 
-  const go = page => { setQ(''); setResults([]); setOpen(false); navigate(page); };
+  const go = page => {
+    setQ('');
+    setResults([]);
+    setOpen(false);
+    navigate(page);
+    if (onSelect) onSelect();
+  };
 
   /* Only doctors, nurses, admins can do global search */
   if (!['nurse','doctor','admin'].includes(user.role)) return null;
 
   return (
-    <div ref={wrapRef} style={{ position:'relative', flex:'1 1 220px', maxWidth:340 }}>
+    <div ref={wrapRef} className="global-search-container" style={{ position:'relative', flex:'1 1 220px', maxWidth:340 }}>
       <div style={{ position:'relative' }}>
         <Icons.IcSearch width={14} height={14} style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', color:'var(--text-400)', pointerEvents:'none' }} />
         <input
@@ -85,6 +93,7 @@ function GlobalSearch() {
           onChange={e => setQ(e.target.value)}
           onFocus={() => results.length > 0 && setOpen(true)}
           autoComplete="off"
+          autoFocus={mobileFocus}
         />
         {searching && (
           <div style={{ position:'absolute', right:10, top:'50%', marginTop:-7, width:14, height:14, border:'2px solid var(--primary)', borderTopColor:'transparent', borderRadius:'50%', animation:'spin 0.6s linear infinite' }} />
@@ -93,7 +102,7 @@ function GlobalSearch() {
       {open && results.length > 0 && (
         <div className="search-dropdown" style={{ top:'calc(100% + 6px)' }}>
           {results.map(p => (
-            <button key={p.id} className="search-dropdown-item" onClick={() => go('register')}>
+            <button key={p.id} className="search-dropdown-item" onClick={() => go(`consultation?patientId=${p.id}`)}>
               <Icons.IcPerson width={13} height={13} style={{ color:'var(--text-400)', flexShrink:0 }} />
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontWeight:700, fontSize:'.83rem', color:'var(--text-900)' }}>{p.name}</div>
@@ -119,13 +128,43 @@ function Topbar() {
   const { user, logout }              = useAuth();
   const { page, navigate, toggleSidebar } = useAppCtx();
   const { restartTour }               = useTour();
-  const { settings }                  = useSettings();
+  const { settings, patchAndSave }    = useSettings();
   const toast                         = useToast();
+
+  const theme = settings?.appearance?.theme ?? 'light';
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    patchAndSave('appearance', { theme: next });
+  };
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const cfg = ROLE_CONFIG[user.role];
   const avatar = settings?.profile?.avatar || '';
 
-  /* close user menu on outside click */
+  /* Live unread notification count — seeded from API, updated via SSE */
+  const [unread, setUnread] = useState(0);
+
+  /* Fetch initial unread count */
+  useEffect(() => {
+    api.get('/api/v1/notifications?unread=true&limit=1')
+      .then(d => setUnread(d.unreadCount ?? 0))
+      .catch(() => {});
+  }, []);
+
+  /* Reset badge when user navigates to notifications page */
+  useEffect(() => {
+    if (page === 'notifications') setUnread(0);
+  }, [page]);
+
+  /* SSE real-time updates */
+  useSSE((event) => {
+    if (event.type === 'notification') {
+      setUnread(n => n + 1);
+      toast.info(event.data?.title ?? 'New notification');
+    }
+  });
+
+  /* Close user menu on outside click */
   useEffect(() => {
     if (!userMenuOpen) return;
     const close = () => setUserMenuOpen(false);
@@ -133,78 +172,106 @@ function Topbar() {
     return () => document.removeEventListener('click', close);
   }, [userMenuOpen]);
 
-  const unread = NAV_CONFIG[user.role]
-    ?.flatMap(s => s.items)
-    .find(i => i.key === 'notifications')?.badge?.count ?? 0;
+  const hasSearchPermission = ['nurse', 'doctor', 'admin'].includes(user.role);
 
   return (
-    <header className="topbar">
-      {/* Hamburger — mobile only */}
-      <button
-        className="icon-btn hamburger-btn"
-        onClick={toggleSidebar}
-        aria-label="Toggle sidebar"
-      >
-        <Icons.IcMenu width={16} height={16} />
-      </button>
-
-      {/* Brand */}
-      <div className="brand" onClick={() => navigate('dashboard')} role="link" tabIndex={0}>
-        <div className="brand-logo">
-          <Icons.IcHospital width={18} height={18} />
-        </div>
-        <span className="brand-name">
-          MediBank <span>Nexus</span>
-        </span>
-      </div>
-
-      {/* Global patient search — desktop */}
-      <GlobalSearch />
-
-      {/* Right controls */}
-      <div className="topbar-right">
-        {/* Tour badge — only shown on pages that have a tour defined */}
-        {TOUR_DEFS[page] && (
-          <button
-            className="tour-badge"
-            onClick={() => restartTour(page)}
-            title="Replay the guided tour for this page"
-            aria-label="Replay page tour"
-          >
-            ? Tour
+    <header className={`topbar${mobileSearchOpen ? ' mobile-search-active' : ''}`}>
+      {mobileSearchOpen ? (
+        <div className="mobile-search-overlay-container" style={{ display: 'flex', width: '100%', alignItems: 'center', gap: 10 }}>
+          <button className="icon-btn" onClick={() => setMobileSearchOpen(false)} aria-label="Close search" style={{ padding: '6px' }}>
+            <Icons.IcArrowLeft width={16} height={16} />
           </button>
-        )}
-        {/* Notifications bell */}
-        <button
-          data-tour="topbar-notifications"
-          className="icon-btn"
-          onClick={() => navigate('notifications')}
-          aria-label={`Notifications${unread ? ` (${unread} unread)` : ''}`}
-        >
-          <Icons.IcBell width={16} height={16} />
-          {unread > 0 && <span className="badge-dot" />}
-        </button>
+          <GlobalSearch mobileFocus={true} onSelect={() => setMobileSearchOpen(false)} />
+        </div>
+      ) : (
+        <>
+          {/* Hamburger — mobile only */}
+          <button
+            className="icon-btn hamburger-btn"
+            onClick={toggleSidebar}
+            aria-label="Toggle sidebar"
+          >
+            <Icons.IcMenu width={16} height={16} />
+          </button>
 
-        {/* User chip */}
-        <div
-          data-tour="topbar-user"
-          className="user-chip"
-          onClick={e => { e.stopPropagation(); setUserMenuOpen(v => !v); }}
-          role="button"
-          tabIndex={0}
-          aria-haspopup="true"
-          aria-expanded={userMenuOpen}
-          style={{ position: 'relative' }}
-        >
-          <Avatar initials={user.initials} color={cfg.color} size={26} src={avatar || undefined} />
-          <div className="user-chip-info">
-            <div className="user-chip-name">{user.name.split(' ')[0]}</div>
-            <div className="user-chip-role">{cfg.label}</div>
+          {/* Brand */}
+          <div className="brand" onClick={() => navigate('dashboard')} role="link" tabIndex={0}>
+            <div className="brand-logo">
+              <Icons.IcHospital width={18} height={18} />
+            </div>
+            <span className="brand-name">
+              MediBank <span>Nexus</span>
+            </span>
           </div>
-          <Icons.IcChevronDown
-            width={12} height={12}
-            style={{ color: 'var(--text-400)', transition: 'transform .2s', transform: userMenuOpen ? 'rotate(180deg)' : '' }}
-          />
+
+          {/* Global patient search — desktop */}
+          <GlobalSearch />
+
+          {/* Right controls */}
+          <div className="topbar-right">
+            {/* Mobile search trigger button */}
+            {hasSearchPermission && (
+              <button
+                className="icon-btn mobile-search-trigger-btn"
+                onClick={() => setMobileSearchOpen(true)}
+                aria-label="Search patients"
+              >
+                <Icons.IcSearch width={16} height={16} />
+              </button>
+            )}
+
+            {/* Tour badge — only shown on pages that have a tour defined */}
+            {TOUR_DEFS[page] && (
+              <button
+                className="tour-badge"
+                onClick={() => restartTour(page)}
+                title="Replay the guided tour for this page"
+                aria-label="Replay page tour"
+              >
+                ? Tour
+              </button>
+            )}
+            {/* Theme toggle */}
+            <button
+              className="icon-btn"
+              onClick={toggleTheme}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              aria-label="Toggle theme"
+            >
+              {theme === 'dark' ? <Icons.IcSun width={16} height={16} /> : <Icons.IcMoon width={16} height={16} />}
+            </button>
+
+            {/* Notifications bell */}
+            <button
+              data-tour="topbar-notifications"
+              className="icon-btn"
+              onClick={() => navigate('notifications')}
+              aria-label={`Notifications${unread ? ` (${unread} unread)` : ''}`}
+            >
+              <Icons.IcBell width={16} height={16} />
+              {unread > 0 && <span className="badge-dot" />}
+            </button>
+
+            {/* User chip */}
+            <div
+              data-tour="topbar-user"
+              className="user-chip"
+              onClick={e => { e.stopPropagation(); setUserMenuOpen(v => !v); }}
+              role="button"
+              tabIndex={0}
+              aria-haspopup="true"
+              aria-expanded={userMenuOpen}
+              style={{ position: 'relative' }}
+            >
+              <Avatar initials={user.initials} color={cfg.color} size={26} src={avatar || undefined} />
+              <div className="user-chip-info">
+                <div className="user-chip-name">{user.name.split(' ')[0]}</div>
+                <div className="user-chip-role">{cfg.label}</div>
+              </div>
+              <Icons.IcChevronDown
+                width={12} height={12}
+                style={{ color: 'var(--text-400)', transition: 'transform .2s', transform: userMenuOpen ? 'rotate(180deg)' : '' }}
+              />
 
           {/* Dropdown */}
           {userMenuOpen && (
@@ -242,7 +309,9 @@ function Topbar() {
           )}
         </div>
       </div>
-    </header>
+    </>
+  )}
+</header>
   );
 }
 
@@ -390,34 +459,34 @@ function Sidebar() {
 ════════════════════════════════════════════════════════════ */
 const ROLE_STATS = {
   nurse: [
-    { icon: <Icons.IcPersonAdd />, label: 'Patients Today',  value: '12',    change: '+3',    trend: 'up',   color: 'var(--teal)',    delay: 0   },
-    { icon: <Icons.IcCalendar  />, label: 'Appointments',    value: '28',    change: '+5',    trend: 'up',   color: 'var(--primary)', delay: 60  },
-    { icon: <Icons.IcBell      />, label: 'Pending Check-ins',value: '4',    change: '-2',    trend: 'up',   color: 'var(--warning)', delay: 120 },
-    { icon: <Icons.IcCheckCircle/>,label: 'Completed Today', value: '8',     change: '+8',    trend: 'up',   color: 'var(--success)', delay: 180 },
+    { icon: <Icons.IcPersonAdd />, label: 'Patients Today',   kpiKey: 'patientsToday',     value: '12',    change: '+3',    trend: 'up',   color: 'var(--teal)',    delay: 0   },
+    { icon: <Icons.IcCalendar  />, label: 'Appointments',     kpiKey: 'totalAppointments', value: '28',    change: '+5',    trend: 'up',   color: 'var(--primary)', delay: 60  },
+    { icon: <Icons.IcBell      />, label: 'Pending Check-ins',kpiKey: null,                value: '4',     change: '-2',    trend: 'up',   color: 'var(--warning)', delay: 120 },
+    { icon: <Icons.IcCheckCircle/>,label: 'Completed Today',  kpiKey: 'totalVisits',       value: '8',     change: '+8',    trend: 'up',   color: 'var(--success)', delay: 180 },
   ],
   doctor: [
-    { icon: <Icons.IcStethoscope/>,label: 'Consultations',   value: '7',     change: '+2',    trend: 'up',   color: 'var(--primary)', delay: 0   },
-    { icon: <Icons.IcPill      />, label: 'Rx Issued',       value: '14',    change: '+4',    trend: 'up',   color: 'var(--teal)',    delay: 60  },
-    { icon: <Icons.IcCalendar  />, label: 'Upcoming',        value: '5',     change: null,    trend: null,   color: 'var(--warning)', delay: 120 },
-    { icon: <Icons.IcCheckCircle/>,label: 'Completed',       value: '7',     change: '+7',    trend: 'up',   color: 'var(--success)', delay: 180 },
+    { icon: <Icons.IcStethoscope/>,label: 'Consultations',    kpiKey: 'totalVisits',       value: '7',     change: '+2',    trend: 'up',   color: 'var(--primary)', delay: 0   },
+    { icon: <Icons.IcPill      />, label: 'Rx Issued',        kpiKey: 'dispensedRx',       value: '14',    change: '+4',    trend: 'up',   color: 'var(--teal)',    delay: 60  },
+    { icon: <Icons.IcCalendar  />, label: 'Upcoming',         kpiKey: 'totalAppointments', value: '5',     change: null,    trend: null,   color: 'var(--warning)', delay: 120 },
+    { icon: <Icons.IcCheckCircle/>,label: 'Completed',        kpiKey: null,                value: '7',     change: '+7',    trend: 'up',   color: 'var(--success)', delay: 180 },
   ],
   pharmacist: [
-    { icon: <Icons.IcPill      />, label: 'Pending Rx',      value: '3',     change: null,    trend: null,   color: 'var(--danger)',  delay: 0   },
-    { icon: <Icons.IcCheckCircle/>,label: 'Dispensed Today', value: '22',    change: '+6',    trend: 'up',   color: 'var(--success)', delay: 60  },
-    { icon: <Icons.IcBox       />, label: 'Low Stock Items',  value: '2',     change: '+1',    trend: 'down', color: 'var(--warning)', delay: 120 },
-    { icon: <Icons.IcBarChart  />, label: 'Total Drugs',     value: '8',     change: null,    trend: null,   color: 'var(--primary)', delay: 180 },
+    { icon: <Icons.IcPill      />, label: 'Pending Rx',       kpiKey: 'pendingRx',         value: '3',     change: null,    trend: null,   color: 'var(--danger)',  delay: 0   },
+    { icon: <Icons.IcCheckCircle/>,label: 'Dispensed Today',  kpiKey: 'dispensedRx',       value: '22',    change: '+6',    trend: 'up',   color: 'var(--success)', delay: 60  },
+    { icon: <Icons.IcBox       />, label: 'Low Stock Items',  kpiKey: 'lowStockItems',     value: '2',     change: '+1',    trend: 'down', color: 'var(--warning)', delay: 120 },
+    { icon: <Icons.IcBarChart  />, label: 'Total Drugs',      kpiKey: null,                value: '8',     change: null,    trend: null,   color: 'var(--primary)', delay: 180 },
   ],
   admin: [
-    { icon: <Icons.IcPeople    />, label: 'Total Patients',  value: '5,486', change: '+24.3%',trend: 'up',   color: 'var(--primary)', delay: 0   },
-    { icon: <Icons.IcBarChart  />, label: 'Monthly Revenue', value: '₦6.01M',change: '+12.8%',trend: 'up',   color: 'var(--success)', delay: 60  },
-    { icon: <Icons.IcCalendar  />, label: 'Appointments',    value: '641',   change: '+18.1%',trend: 'up',   color: 'var(--teal)',    delay: 120 },
-    { icon: <Icons.IcPill      />, label: 'Rx Issued',       value: '4,108', change: '+9.7%', trend: 'up',   color: 'var(--warning)', delay: 180 },
+    { icon: <Icons.IcPeople    />, label: 'Total Patients',   kpiKey: 'totalPatients',     value: '5,486', change: '+24.3%',trend: 'up',   color: 'var(--primary)', delay: 0   },
+    { icon: <Icons.IcBarChart  />, label: 'Monthly Revenue',  kpiKey: null,                value: '₦6.01M',change: '+12.8%',trend: 'up',   color: 'var(--success)', delay: 60  },
+    { icon: <Icons.IcCalendar  />, label: 'Appointments',     kpiKey: 'totalAppointments', value: '641',   change: '+18.1%',trend: 'up',   color: 'var(--teal)',    delay: 120 },
+    { icon: <Icons.IcPill      />, label: 'Rx Issued',        kpiKey: 'dispensedRx',       value: '4,108', change: '+9.7%', trend: 'up',   color: 'var(--warning)', delay: 180 },
   ],
   patient: [
-    { icon: <Icons.IcCalendar  />, label: 'Next Appointment',value: '25 Mar',change: null,    trend: null,   color: 'var(--primary)', delay: 0   },
-    { icon: <Icons.IcPill      />, label: 'Active Rx',       value: '1',     change: null,    trend: null,   color: 'var(--teal)',    delay: 60  },
-    { icon: <Icons.IcHistory   />, label: 'Past Visits',     value: '3',     change: null,    trend: null,   color: 'var(--warning)', delay: 120 },
-    { icon: <Icons.IcBell      />, label: 'Notifications',   value: '3',     change: null,    trend: null,   color: 'var(--danger)',  delay: 180 },
+    { icon: <Icons.IcCalendar  />, label: 'Next Appointment', kpiKey: null,                value: '25 Mar',change: null,    trend: null,   color: 'var(--primary)', delay: 0   },
+    { icon: <Icons.IcPill      />, label: 'Active Rx',        kpiKey: null,                value: '1',     change: null,    trend: null,   color: 'var(--teal)',    delay: 60  },
+    { icon: <Icons.IcHistory   />, label: 'Past Visits',      kpiKey: null,                value: '3',     change: null,    trend: null,   color: 'var(--warning)', delay: 120 },
+    { icon: <Icons.IcBell      />, label: 'Notifications',    kpiKey: null,                value: '3',     change: null,    trend: null,   color: 'var(--danger)',  delay: 180 },
   ],
 };
 
@@ -443,8 +512,6 @@ const AI_MODEL_LABELS = {
   gemini: 'Gemini',
 };
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
-
 function AiChat({ role }) {
   const { settings } = useSettings();
   const preferredModel = settings?.clinical?.preferredAiModel ?? 'claude';
@@ -460,31 +527,19 @@ function AiChat({ role }) {
     setMessages(p => [...p, { from: 'user', text: userMsg }]);
     setLoading(true);
     try {
-      const token = localStorage.getItem('nexus_token');
-      const res   = await fetch(`${API_BASE}/api/v1/ai/message`, {
-        method:  'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          messages:  [{ role: 'user', content: userMsg }],
-          model:     preferredModel,
-          maxTokens: 400,
-        }),
+      /* Use the shared api helper so 401 auto-refresh applies here too */
+      const data = await api.post('/api/v1/ai/message', {
+        messages:  [{ role: 'user', content: userMsg }],
+        model:     preferredModel,
+        maxTokens: 400,
       });
-
-      if (!res.ok) {
-        /* Fall back to a helpful error rather than crashing */
-        const err = await res.json().catch(() => ({}));
-        setMessages(p => [...p, { from: 'ai', text: err.error ?? 'Service temporarily unavailable. Please try again.' }]);
-      } else {
-        const data  = await res.json();
-        const reply = data.content?.[0]?.text ?? data.choices?.[0]?.message?.content ?? "I'm here to help! Could you rephrase that?";
-        setMessages(p => [...p, { from: 'ai', text: reply }]);
-      }
-    } catch {
-      setMessages(p => [...p, { from: 'ai', text: 'Connection issue. Please check your network and try again.' }]);
+      const reply = data.content?.[0]?.text
+        ?? data.choices?.[0]?.message?.content
+        ?? "I'm here to help! Could you rephrase that?";
+      setMessages(p => [...p, { from: 'ai', text: reply }]);
+    } catch (err) {
+      const msg = err?.data?.error ?? err?.message ?? 'Service temporarily unavailable. Please try again.';
+      setMessages(p => [...p, { from: 'ai', text: msg }]);
     }
     setLoading(false);
   };
@@ -563,9 +618,52 @@ function Dashboard() {
   const { user }    = useAuth();
   const { navigate } = useAppCtx();
   const cfg          = ROLE_CONFIG[user.role];
-  const stats        = ROLE_STATS[user.role] ?? [];
   const actions      = QUICK_ACTIONS[user.role] ?? [];
   const today        = new Date().toLocaleDateString('en-NG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  const [stats,       setStats]       = useState(() => ROLE_STATS[user.role] ?? []);
+  const [kpiLoading,  setKpiLoading]  = useState(false);
+
+  useEffect(() => {
+    if (!['admin', 'doctor', 'nurse', 'pharmacist'].includes(user.role)) return;
+
+    /**
+     * KPI_MAP — maps each stat card's stable `kpiKey` to the API field name.
+     * Using explicit keys prevents silent breakage when label text is edited.
+     */
+    const KPI_MAP = {
+      totalPatients:    (kpis) => String(kpis.totalPatients    ?? ''),
+      patientsToday:    (kpis) => String(kpis.totalPatients    ?? ''),
+      totalAppointments:(kpis) => String(kpis.totalAppointments ?? ''),
+      pendingRx:        (kpis) => String(kpis.pendingRx        ?? ''),
+      dispensedRx:      (kpis) => String(kpis.dispensedRx      ?? ''),
+      lowStockItems:    (kpis) => String(kpis.lowStockItems    ?? ''),
+      totalVisits:      (kpis) => String(kpis.totalVisits      ?? ''),
+    };
+
+    const fetchKPIs = async () => {
+      setKpiLoading(true);
+      try {
+        const res  = await api.get('/api/v1/analytics/summary');
+        const kpis = res.kpis;
+        if (kpis) {
+          setStats(prev =>
+            prev.map(s =>
+              s.kpiKey && KPI_MAP[s.kpiKey]
+                ? { ...s, value: KPI_MAP[s.kpiKey](kpis) || s.value }
+                : s
+            )
+          );
+        }
+      } catch (err) {
+        console.error('[Dashboard] Failed to fetch live KPIs:', err);
+      } finally {
+        setKpiLoading(false);
+      }
+    };
+
+    fetchKPIs();
+  }, [user.role]);
 
   return (
     <div className="anim-fade-in">
@@ -588,7 +686,7 @@ function Dashboard() {
       {/* KPI stats */}
       <div data-tour="kpi-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 13, marginBottom: 22 }}>
         {stats.map((s, i) => (
-          <StatCard key={i} {...s} />
+          <StatCard key={i} {...s} loading={kpiLoading} />
         ))}
       </div>
 
@@ -626,37 +724,24 @@ function PagePlaceholder({ pageKey }) {
   const { navigate } = useAppCtx();
   const title = PAGE_TITLES[pageKey] ?? pageKey;
 
-  const COMING = {
-    register:      { icon: <Icons.IcPersonAdd  width={26} height={26} />, step: '7'  },
-    consultation:  { icon: <Icons.IcStethoscope width={26} height={26} />, step: '8'  },
-    pharmacy:      { icon: <Icons.IcPill        width={26} height={26} />, step: '9'  },
-    appointments:  { icon: <Icons.IcCalendar    width={26} height={26} />, step: '10' },
-    analytics:     { icon: <Icons.IcBarChart    width={26} height={26} />, step: '11' },
-    portal:        { icon: <Icons.IcFileMedical  width={26} height={26} />, step: '12' },
-    notifications: { icon: <Icons.IcBell        width={26} height={26} />, step: '13' },
-    settings:      { icon: <Icons.IcGear        width={26} height={26} />, step: '—'  },
-  };
-  const meta = COMING[pageKey] ?? { icon: <Icons.IcGrid width={26} height={26} />, step: '—' };
-
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 200px)' }}>
-      <div style={{ textAlign: 'center', maxWidth: 340 }}>
+      <div style={{ textAlign: 'center', maxWidth: 360, padding: 20 }}>
         <div style={{
-          width: 64, height: 64, borderRadius: 18,
+          width: 72, height: 72, borderRadius: 20,
           background: 'var(--primary-light)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 18px', color: 'var(--primary)',
+          margin: '0 auto 24px', color: 'var(--primary)',
         }}>
-          {meta.icon}
+          <Icons.IcGrid width={32} height={32} />
         </div>
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 900, letterSpacing: '-.02em', marginBottom: 8 }}>
-          {title}
+        <h2 style={{ fontSize: '1.35rem', fontWeight: 900, letterSpacing: '-.02em', marginBottom: 10 }}>
+          Page Not Found
         </h2>
-        <p style={{ fontSize: '.85rem', color: 'var(--text-500)', lineHeight: 1.65, marginBottom: 20 }}>
-          This module is coming in <strong>Step {meta.step}</strong> of the build.
-          The full working implementation will be built next.
+        <p style={{ fontSize: '.88rem', color: 'var(--text-500)', lineHeight: 1.6, marginBottom: 24 }}>
+          The module "{title}" may have been moved, renamed, or is currently under scheduled maintenance.
         </p>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={() => navigate('dashboard')}>
             <Icons.IcHome width={14} height={14} /> Back to Dashboard
           </button>
@@ -667,19 +752,32 @@ function PagePlaceholder({ pageKey }) {
 }
 
 /* ════════════════════════════════════════════════════════════
-   PAGE ROUTER
+   PAGE ROUTER  — reads active page from the URL wildcard so
+   that browser back / forward and deep-links work correctly.
 ════════════════════════════════════════════════════════════ */
 function PageRouter() {
-  const { page } = useAppCtx();
+  const { syncPage }  = useAppCtx();
+  const params        = useParams();
 
-  switch (page) {
-    case 'dashboard': return <Dashboard />;
-    case 'register':      return <RegisterPage />;
-    case 'consultation':  return <ConsultationPage />;
-    case 'pharmacy':      return <PharmacyPage />;
-    case 'appointments':  return <AppointmentsPage />;
-    case 'analytics':     return <AnalyticsPage />;
-    case 'portal':         return <PatientPortalPage />;
+  /**
+   * The AppShell is mounted under <Route path="/app/*">, so
+   * params['*'] contains everything after /app/ — e.g. 'billing'.
+   */
+  const urlPage = params['*'] || 'dashboard';
+
+  /* Keep context in sync with URL (back/forward navigation) */
+  useEffect(() => {
+    syncPage(urlPage);
+  }, [urlPage, syncPage]);
+
+  switch (urlPage) {
+    case 'dashboard':        return <Dashboard />;
+    case 'register':         return <RegisterPage />;
+    case 'consultation':     return <ConsultationPage />;
+    case 'pharmacy':         return <PharmacyPage />;
+    case 'appointments':     return <AppointmentsPage />;
+    case 'analytics':        return <AnalyticsPage />;
+    case 'portal':           return <PatientPortalPage />;
     case 'notifications':    return <NotificationsPage />;
     case 'staff-management': return <StaffManagementPage />;
     case 'settings':         return <SettingsPage />;
@@ -688,7 +786,7 @@ function PageRouter() {
     case 'formulary':        return <FormularyPage />;
     case 'inpatient':        return <InpatientPage />;
     case 'referrals':        return <ReferralsPage />;
-    default:                 return <PagePlaceholder pageKey={page} />;
+    default:                 return <PagePlaceholder pageKey={urlPage} />;
   }
 }
 

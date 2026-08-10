@@ -6,7 +6,7 @@
 import { Router } from 'express';
 import { body, query, param, validationResult } from 'express-validator';
 import db           from '../db.js';
-import { authenticate } from '../middleware/auth.js';
+import authenticate from '../middleware/auth.js';
 import { allow }        from '../middleware/rbac.js';
 
 const router = Router();

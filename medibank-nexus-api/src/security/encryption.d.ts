@@ -1,0 +1,10 @@
+export declare function encrypt(plaintext: string | number | null | undefined): string | null;
+export declare function decrypt(stored: string | null | undefined): string | null;
+export declare function isEncrypted(value: any): boolean;
+export declare function encryptIfNeeded(value: any): any;
+export declare function encryptPatient(patientData: Record<string, any>): Record<string, any>;
+export declare function decryptPatient(patientRow: Record<string, any> | null | undefined): Record<string, any> | null;
+export declare function decryptPatients(rows: Array<Record<string, any>>): Array<Record<string, any>>;
+export declare function mask(value: string | number | null | undefined, visibleChars?: number): string | null;
+export declare function secureToken(bytes?: number): string;
+export declare function safeCompare(a: string | number, b: string | number): boolean;

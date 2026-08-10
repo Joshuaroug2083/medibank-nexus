@@ -613,6 +613,63 @@ function Footer({ onNavigateModule, onNavigateStatic }) {
   );
 }
 
+/* ── Cookie Consent Banner ─────────────────────────────────── */
+function CookieConsent() {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const consent = localStorage.getItem('ndpr_consent');
+    if (!consent) {
+      const t = setTimeout(() => setVisible(true), 800);
+      return () => clearTimeout(t);
+    }
+  }, []);
+
+  const accept = () => {
+    localStorage.setItem('ndpr_consent', 'accepted');
+    setVisible(false);
+  };
+
+  const decline = () => {
+    localStorage.setItem('ndpr_consent', 'declined');
+    setVisible(false);
+  };
+
+  if (!visible) return null;
+
+  return (
+    <>
+      <style>{`
+        @keyframes slideUp {
+          from { transform: translateY(100px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
+      <div style={{
+        position: 'fixed', bottom: 20, left: 20, right: 20, maxWidth: 460,
+        background: 'rgba(255, 255, 255, 0.96)', border: '1px solid var(--border)',
+        borderRadius: 'var(--radius-xl)', padding: '16px 20px', zIndex: 9999,
+        boxShadow: 'var(--shadow-xl)', backdropFilter: 'blur(8px)',
+        display: 'flex', flexDirection: 'column', gap: 12,
+        animation: 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both',
+      }}>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: '.9rem', color: 'var(--text-900)', marginBottom: 4 }}>
+            NDPR Cookie Consent
+          </div>
+          <div style={{ fontSize: '.76rem', color: 'var(--text-500)', lineHeight: 1.45 }}>
+            We use cookies to optimize platform performance, analyze traffic metrics, and maintain full NDPR compliance. By clicking "Accept", you consent to our privacy and data practices.
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, alignSelf: 'flex-end' }}>
+          <button className="btn btn-outline btn-xs" style={{ fontSize: '.7rem', padding: '4px 10px' }} onClick={decline}>Decline</button>
+          <button className="btn btn-primary btn-xs" style={{ fontSize: '.7rem', padding: '4px 10px' }} onClick={accept}>Accept</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ── main component ──────────────────────────────────────── */
 export default function LandingPage({
   onGetStarted, onGetPro, onContactUs,
@@ -642,6 +699,7 @@ export default function LandingPage({
       <Testimonials />
       <CtaBanner onStartTrial={handleStartTrial} onContactUs={handleContactUs} />
       <Footer onNavigateModule={handleNavModule} onNavigateStatic={handleNavStatic} />
+      <CookieConsent />
     </div>
   );
 }

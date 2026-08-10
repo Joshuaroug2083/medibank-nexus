@@ -5,36 +5,49 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "dev":              "nodemon src/index.js",
-    "start":            "node src/index.js",
-    "db:migrate":       "node scripts/migrate.js",
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "db:migrate": "node scripts/migrate.js",
     "db:migrate:reset": "node scripts/migrate.js --reset",
-    "db:seed":          "node scripts/seed.js",
-    "audit:check":      "npm audit --audit-level=high"
+    "db:seed": "node scripts/seed.js",
+    "audit:check": "npm audit --audit-level=high"
   },
   "dependencies": {
-    "bcrypt":              "^5.1.1",
-    "cors":                "^2.8.5",
-    "dotenv":              "^16.4.5",
-    "express":             "^4.19.2",
-    "express-rate-limit":  "^7.3.1",
-    "express-validator":   "^7.1.0",
-    "helmet":              "^7.1.0",
-    "hpp":                 "^0.2.3",
-    "ioredis":             "^5.3.2",
-    "jsonwebtoken":        "^9.0.2",
-    "knex":                "^3.1.0",
-    "morgan":              "^1.10.0",
-    "pg":                  "^8.12.0",
-    "rate-limit-redis":    "^4.2.0",
-    "uuid":                "^10.0.0",
-    "xss-clean":           "^0.1.4"
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "express-validator": "^7.1.0",
+    "helmet": "^7.1.0",
+    "hpp": "^0.2.3",
+    "ioredis": "^5.3.2",
+    "jsonwebtoken": "^9.0.2",
+    "knex": "^3.1.0",
+    "morgan": "^1.10.0",
+    "nodemailer": "^8.0.10",
+    "otplib": "^13.4.1",
+    "pg": "^8.12.0",
+    "rate-limit-redis": "^4.2.0",
+    "uuid": "^10.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.2",
+    "@vitest/coverage-v8": "^2.0.0",
+    "nodemon": "^3.1.4",
+    "supertest": "^7.0.0",
+    "typescript": "^6.0.3",
+    "vitest": "^2.0.0"
   },
   "nodemonConfig": {
-    "ext":   "js",
-    "watch": ["src"]
+    "ext": "js",
+    "watch": [
+      "src"
+    ]
   }
 }

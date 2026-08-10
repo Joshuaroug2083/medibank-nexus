@@ -4,11 +4,12 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth }  from '../context/AuthContext';
-import { apiFetch } from '../context/AuthContext';
+import { api }      from '../lib/api';
 import {
   IcArrowRight, IcPerson, IcSearch, IcCheckCircle,
   IcWarning, IcClock, IcHospital,
 } from '../components/Icons';
+import { useToast } from '../components';
 
 const MOCK_REFERRALS = [
   { id: 1, patient_name: 'Amaka Obi',    referral_type: 'internal', from_dept: 'Emergency', to_dept: 'Cardiology',       from_doctor_name: 'Dr. Ibrahim', reason: 'Chest pain — rule out MI',            urgency: 'urgent',  status: 'pending',   created_at: new Date(Date.now()-3600000).toISOString()  },
@@ -31,8 +32,12 @@ const STATUS_STYLE = {
 
 export default function ReferralsPage() {
   const { user }               = useAuth();
+  const toast                  = useToast();
   const [referrals, setReferrals] = useState([]);
   const [loading,   setLoading]   = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore,   setHasMore]   = useState(true);
+  const [page,      setPage]      = useState(1);
   const [filter,    setFilter]    = useState('all'); // all | pending | accepted | completed
   const [search,    setSearch]    = useState('');
   const [showForm,  setShowForm]  = useState(false);
@@ -43,48 +48,70 @@ export default function ReferralsPage() {
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams({ limit: 50 });
-      if (filter !== 'all') params.set('status', filter);
-      const res = await apiFetch(`/api/v1/referrals?${params}`);
-      if (res.ok) {
-        const data = await res.json();
-        setReferrals(data.referrals);
-      } else throw new Error();
-    } catch {
-      setReferrals(MOCK_REFERRALS);
-    } finally { setLoading(false); }
+  const PAGE_SIZE = 20;
+
+  useEffect(() => {
+    setPage(1);
   }, [filter]);
 
-  useEffect(() => { load(); }, [load]);
+  const load = useCallback(async () => {
+    if (page === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+    try {
+      const params = new URLSearchParams({ limit: PAGE_SIZE, page });
+      if (filter !== 'all') params.set('status', filter);
+      const data = await api.get(`/api/v1/referrals?${params}`);
+      const newReferrals = data.referrals ?? [];
+      setReferrals(prev => page === 1 ? newReferrals : [...prev, ...newReferrals]);
+      setHasMore(newReferrals.length === PAGE_SIZE);
+    } catch {
+      if (page === 1) {
+        setReferrals(MOCK_REFERRALS);
+        setHasMore(false);
+      }
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [filter, page]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const handleCreate = async () => {
     if (!form.reason.trim()) return setSaveErr('Reason is required');
     setSaving(true); setSaveErr('');
     try {
-      const res  = await apiFetch('/api/v1/referrals', {
-        method: 'POST',
-        body:   JSON.stringify({
-          patientId:      form.patientId || undefined,
-          referralType:   form.referralType,
-          toDept:         form.toDept || undefined,
-          toHospitalName: form.toHospitalName || undefined,
-          toSpecialist:   form.toSpecialist || undefined,
-          reason:         form.reason,
-          urgency:        form.urgency,
-          clinicalSummary:form.clinicalSummary || undefined,
-        }),
+      const data = await api.post('/api/v1/referrals', {
+        patientId:      form.patientId || undefined,
+        referralType:   form.referralType,
+        toDept:         form.toDept || undefined,
+        toHospitalName: form.toHospitalName || undefined,
+        toSpecialist:   form.toSpecialist || undefined,
+        reason:         form.reason,
+        urgency:        form.urgency,
+        clinicalSummary:form.clinicalSummary || undefined,
       });
-      const data = await res.json();
-      if (!res.ok) { setSaveErr(data.error); setSaving(false); return; }
       setReferrals(r => [data.referral, ...r]);
       setShowForm(false);
       setForm({ patientId:'',referralType:'internal',toDept:'',toHospitalName:'',toSpecialist:'',reason:'',urgency:'routine',clinicalSummary:'' });
-    } catch {
-      setSaveErr('Network error. Please try again.');
+    } catch (e) {
+      setSaveErr(e.data?.error ?? 'Network error. Please try again.');
     } finally { setSaving(false); }
+  };
+
+  const updateStatus = async (id, status) => {
+    try {
+      await api.put(`/api/v1/referrals/${id}`, { status });
+      toast.success(`Referral marked as ${status}`);
+      load();
+    } catch (e) {
+      toast.error(e.data?.error ?? 'Failed to update referral.');
+    }
   };
 
   const p = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -209,17 +236,49 @@ export default function ReferralsPage() {
                     <span style={{ fontSize: '.72rem', padding: '2px 7px', borderRadius: 'var(--radius-full)', fontWeight: 700, background: statusBg, color: statusColor, marginLeft: 'auto' }}>{r.status}</span>
                   </div>
                   <div style={{ fontSize: '.84rem', color: 'var(--text-700)', marginBottom: 4 }}>{r.reason}</div>
-                  <div style={{ fontSize: '.78rem', color: 'var(--text-400)', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: '.78rem', color: 'var(--text-400)', display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span><strong>From:</strong> {r.from_dept ?? r.from_doctor_name ?? '—'}</span>
                     <span><strong>To:</strong> {r.to_dept ?? r.to_hospital_name ?? '—'}{r.to_specialist ? ` (${r.to_specialist})` : ''}</span>
                     <span style={{ marginLeft: 'auto' }}>{new Date(r.created_at).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   </div>
+
+                  {(user?.role === 'doctor' || user?.role === 'admin') && (r.status === 'pending' || r.status === 'accepted') && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12, justifyContent: 'flex-end' }}>
+                      {r.status === 'pending' && (
+                        <>
+                          <button className="btn btn-outline btn-xs" onClick={() => updateStatus(r.id, 'accepted')}>
+                            Accept Referral
+                          </button>
+                          <button className="btn btn-outline btn-xs" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => updateStatus(r.id, 'cancelled')}>
+                            Cancel
+                          </button>
+                        </>
+                      )}
+                      {r.status === 'accepted' && (
+                        <>
+                          <button className="btn btn-xs btn-primary" onClick={() => updateStatus(r.id, 'completed')}>
+                            Mark Completed
+                          </button>
+                          <button className="btn btn-outline btn-xs" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => updateStatus(r.id, 'cancelled')}>
+                            Cancel
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           );
         })}
       </div>
+      {hasMore && referrals.length > 0 && (
+        <div style={{ textAlign: 'center', marginTop: 20 }}>
+          <button className="btn btn-outline btn-sm" onClick={() => setPage(p => p + 1)} disabled={loadingMore}>
+            {loadingMore ? 'Loading...' : 'Load More'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

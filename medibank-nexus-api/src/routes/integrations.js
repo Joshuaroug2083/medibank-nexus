@@ -21,6 +21,7 @@ import db           from '../db.js';
 import authenticate from '../middleware/auth.js';
 import { audit }    from '../middleware/audit.js';
 import { encrypt, decrypt } from '../security/encryption.js';
+import { getPatientIdForUser } from './patients.js';
 
 const router = Router();
 
@@ -305,11 +306,19 @@ router.post('/ai-keys/test', authenticate, async (req, res, next) => {
 /* Returns a downloadable .ics file of the user's upcoming appointments */
 router.get('/calendar/export.ics', authenticate, async (req, res, next) => {
   try {
+    let ptId = null;
+    if (req.user.role === 'patient') {
+      ptId = await getPatientIdForUser(req.user.id, req.user.email, req.hospitalId);
+    }
+
     const rows = await db('appointments')
       .where({ hospital_id: req.hospitalId })
       .modify(qb => {
         if (req.user.role === 'doctor')  qb.where('doctor_id', req.user.id);
-        if (req.user.role === 'patient') qb.where('patient_id', req.user.id);
+        if (req.user.role === 'patient') {
+          if (ptId) qb.where('patient_id', ptId);
+          else qb.whereRaw('1=0');
+        }
       })
       .where('scheduled_at', '>=', new Date())
       .orderBy('scheduled_at', 'asc')
@@ -358,12 +367,20 @@ router.post('/calendar/sync', authenticate, async (req, res, next) => {
         });
     }
 
+    let ptId = null;
+    if (req.user.role === 'patient') {
+      ptId = await getPatientIdForUser(req.user.id, req.user.email, req.hospitalId);
+    }
+
     /* Fetch upcoming appointments */
     const rows = await db('appointments')
       .where({ hospital_id: req.hospitalId })
       .modify(qb => {
         if (req.user.role === 'doctor')  qb.where('doctor_id', req.user.id);
-        if (req.user.role === 'patient') qb.where('patient_id', req.user.id);
+        if (req.user.role === 'patient') {
+          if (ptId) qb.where('patient_id', ptId);
+          else qb.whereRaw('1=0');
+        }
       })
       .where('scheduled_at', '>=', new Date())
       .orderBy('scheduled_at', 'asc')

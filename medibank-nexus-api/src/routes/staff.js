@@ -5,8 +5,63 @@ import db           from '../db.js';
 import authenticate from '../middleware/auth.js';
 import { allow }    from '../middleware/rbac.js';
 import { audit }    from '../middleware/audit.js';
+import { filterStaff, safeUser } from '../security/dataFilter.js';
 
 const router = Router();
+
+/* ── POST /api/v1/staff/accept-invite  ───────────────────────────── */
+/* Public endpoint — no auth required */
+router.post('/accept-invite', async (req, res, next) => {
+  try {
+    const { email, token, name, password } = req.body;
+    if (!email || !token || !name || !password) {
+      return res.status(400).json({ error: 'email, token, name and password are required' });
+    }
+    if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+    const normalEmail = email.trim().toLowerCase();
+    const invitations = await db('staff_invitations')
+      .where({ email: normalEmail, accepted_at: null })
+      .where('expires_at', '>', new Date())
+      .orderBy('created_at', 'desc');
+
+    let matchedInv = null;
+    for (const inv of invitations) {
+      if (await bcrypt.compare(token, inv.token_hash)) {
+        matchedInv = inv;
+        break;
+      }
+    }
+
+    if (!matchedInv) return res.status(400).json({ error: 'Invalid or expired invitation' });
+
+    /* Check email not already used */
+    const alreadyExists = await db('users').where({ hospital_id: matchedInv.hospital_id, email: normalEmail }).first();
+    if (alreadyExists) return res.status(409).json({ error: 'An account with this email already exists' });
+
+    const hashed  = await bcrypt.hash(password, 12);
+    const initials = name.split(' ').map(p => p[0]?.toUpperCase()).join('').slice(0, 2);
+
+    const [user] = await db('users').insert({
+      hospital_id: matchedInv.hospital_id,
+      email:       normalEmail,
+      password:    hashed,
+      name,
+      initials,
+      role:        matchedInv.role,
+      dept:        matchedInv.dept ?? '',
+      status:      'active',
+      created_at:  new Date(),
+    }).returning('id','email','name','role','dept','status');
+
+    await db('staff_invitations').where({ id: matchedInv.id }).update({ accepted_at: new Date() });
+
+    audit({ userId: user.id, hospitalId: matchedInv.hospital_id, action: 'invitation_accepted', entity: 'user', entityId: user.id });
+
+    /* Strip password hash from response */
+    return res.status(201).json({ message: 'Account created successfully. You can now sign in.', user: safeUser(user) });
+  } catch (err) { next(err); }
+});
 
 /* All staff routes require authentication ────────────────────── */
 router.use(authenticate);
@@ -27,7 +82,7 @@ router.get('/', async (req, res, next) => {
 
     let query = db('users')
       .where({ hospital_id: req.hospitalId })
-      .whereNot({ role: 'patient' })           // patients managed separately
+      .whereNot({ role: 'patient' })
       .select('id','email','name','initials','role','dept','status','created_at');
 
     if (role)   query = query.where({ role });
@@ -41,7 +96,9 @@ router.get('/', async (req, res, next) => {
       });
     }
 
-    const staff = await query.orderBy('name');
+    const rows  = await query.orderBy('name');
+    /* Apply role-based field filtering — non-admins see limited colleague info */
+    const staff = rows.map(m => filterStaff(m, req.user.role));
     return res.json({ staff });
   } catch (err) {
     next(err);
@@ -141,17 +198,28 @@ router.delete('/:id', allow('admin'), async (req, res, next) => {
 });
 
 /* ── POST /api/v1/staff/:id/reset-password  ─────────────────────── */
-router.post('/:id/reset-password', async (req, res, next) => {
+router.post('/:id/reset-password', allow('admin'), async (req, res, next) => {
   try {
+    /* Prevent self-reset via this admin-only endpoint */
+    if (req.params.id === req.user.id) {
+      return res.status(400).json({ error: 'Use the change-password endpoint for your own account' });
+    }
+
     const member = await db('users').where({ id: req.params.id, hospital_id: req.hospitalId }).first();
     if (!member) return res.status(404).json({ error: 'Staff member not found' });
 
     const tempPassword = 'Welcome@123';
-    const hashed       = await bcrypt.hash(tempPassword, 10);
+    const hashed       = await bcrypt.hash(tempPassword, 12);
     await db('users').where({ id: req.params.id }).update({ password: hashed, updated_at: new Date() });
 
     audit({ userId: req.user.id, hospitalId: req.hospitalId, action: 'staff_password_reset', entity: 'user', entityId: req.params.id });
-    return res.json({ message: `Password reset. Temporary password: ${tempPassword}` });
+
+    const isDev = process.env.NODE_ENV !== 'production';
+    return res.json({
+      message: 'Temporary password has been set. Staff member must change it on next login.',
+      /* Only expose temp password in development — in production send via email */
+      ...(isDev ? { devTempPassword: tempPassword } : {}),
+    });
   } catch (err) {
     next(err);
   }
@@ -223,58 +291,6 @@ router.post('/invite', allow('admin'), async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-/* ── POST /api/v1/staff/accept-invite  ───────────────────────────── */
-/* Public endpoint — no auth required */
-router.post('/accept-invite', async (req, res, next) => {
-  try {
-    const { email, token, name, password } = req.body;
-    if (!email || !token || !name || !password) {
-      return res.status(400).json({ error: 'email, token, name and password are required' });
-    }
-    if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
-
-    const normalEmail = email.trim().toLowerCase();
-    const invitations = await db('staff_invitations')
-      .where({ email: normalEmail, accepted_at: null })
-      .where('expires_at', '>', new Date())
-      .orderBy('created_at', 'desc');
-
-    let matchedInv = null;
-    for (const inv of invitations) {
-      if (await bcrypt.compare(token, inv.token_hash)) {
-        matchedInv = inv;
-        break;
-      }
-    }
-
-    if (!matchedInv) return res.status(400).json({ error: 'Invalid or expired invitation' });
-
-    /* Check email not already used */
-    const alreadyExists = await db('users').where({ hospital_id: matchedInv.hospital_id, email: normalEmail }).first();
-    if (alreadyExists) return res.status(409).json({ error: 'An account with this email already exists' });
-
-    const hashed  = await bcrypt.hash(password, 12);
-    const initials = name.split(' ').map(p => p[0]?.toUpperCase()).join('').slice(0, 2);
-
-    const [user] = await db('users').insert({
-      hospital_id: matchedInv.hospital_id,
-      email:       normalEmail,
-      password:    hashed,
-      name,
-      initials,
-      role:        matchedInv.role,
-      dept:        matchedInv.dept ?? '',
-      status:      'active',
-      created_at:  new Date(),
-    }).returning('id','email','name','role','dept','status');
-
-    await db('staff_invitations').where({ id: matchedInv.id }).update({ accepted_at: new Date() });
-
-    audit({ userId: user.id, hospitalId: matchedInv.hospital_id, action: 'invitation_accepted', entity: 'user', entityId: user.id });
-
-    return res.status(201).json({ message: 'Account created successfully. You can now sign in.', user });
-  } catch (err) { next(err); }
-});
 
 /* ── GET /api/v1/staff/invitations  ─────────────────────────────── */
 router.get('/invitations', allow('admin'), async (req, res, next) => {

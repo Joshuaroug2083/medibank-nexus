@@ -1,0 +1,72 @@
+/* ============================================================
+   ANALYTICS PAGE  (added Step 11)
+   ============================================================ */
+.analytics-root { max-width: 1100px; }
+
+.analytics-tabs {
+  display: flex;
+  gap: 3px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  margin-bottom: 20px;
+  width: fit-content;
+}
+.analytics-tab {
+  padding: 8px 20px;
+  border-radius: var(--radius);
+  font-size: .83rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-500);
+  font-family: var(--font);
+  transition: all var(--t-fast) var(--ease);
+}
+.analytics-tab:hover  { color: var(--primary); background: white; }
+.analytics-tab.active { color: var(--primary); background: white; box-shadow: var(--shadow-sm); font-weight: 700; }
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 13px;
+  margin-bottom: 18px;
+}
+
+.charts-row {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.charts-row > * { min-width: 0; }
+
+.analytics-bottom {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.dx-row, .dept-row { margin-bottom: 12px; }
+.dx-row:last-child, .dept-row:last-child { margin-bottom: 0; }
+
+.audit-list { display: flex; flex-direction: column; gap: 0; }
+.audit-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+.audit-row:last-child { border-bottom: none; }
+.audit-level-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+@media (max-width: 700px) { .analytics-bottom { grid-template-columns: 1fr; } }

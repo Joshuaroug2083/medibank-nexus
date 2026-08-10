@@ -1,0 +1,535 @@
+/* ============================================================
+   5. LAYOUT
+   ============================================================ */
+
+/* ── App Shell ── */
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+/* ── Topbar ── */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  height: 58px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 8px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+/* ── App Body ── */
+.app-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 232px;
+  flex-shrink: 0;
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 12px 8px;
+  transition: width 220ms var(--ease),
+              transform var(--t) var(--ease),
+              box-shadow var(--t) var(--ease);
+}
+
+/* ── Collapsed sidebar ── */
+.sidebar.collapsed {
+  width: 56px;
+  padding: 12px 4px;
+  overflow: visible;
+}
+.sidebar.collapsed .sidebar-section { display: none; }
+.sidebar.collapsed .sidebar-section-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 6px;
+}
+
+/* ── Sidebar hospital chip ── */
+.sidebar-hospital-chip {
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -12px -8px 0;
+  margin-bottom: 0;
+}
+.sidebar-hospital-chip.collapsed {
+  padding: 8px 4px;
+  justify-content: center;
+  margin: -12px -4px 0;
+}
+.sidebar-hospital-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: .7rem;
+  cursor: default;
+}
+
+/* ── Collapsed role badge ── */
+.sidebar-role-badge.collapsed {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+/* ── Icon-only nav items ── */
+.nav-item.icon-only {
+  justify-content: center;
+  padding: 8px;
+  gap: 0;
+  border-radius: var(--radius-md);
+}
+.nav-item.icon-only svg { width: 18px; height: 18px; }
+
+/* Badge dot for collapsed state */
+.nav-item-badge-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--white);
+}
+
+/* ── Main Content Area ── */
+.main-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 24px;
+  background: var(--bg);
+  min-width: 0;
+}
+
+/* ── Page Grid Layouts ── */
+.grid-2col { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-4); }
+.grid-3col { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
+.grid-4col { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); }
+.grid-auto { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--space-4); }
+
+/* ── Container ── */
+.container        { max-width: 1100px; margin: 0 auto; width: 100%; padding: 0 var(--space-6); }
+.container-narrow { max-width: 720px;  margin: 0 auto; width: 100%; padding: 0 var(--space-6); }
+
+/* ── Page Header ── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-6);
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.page-title {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--text-900);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.page-title span { color: var(--primary); }
+.page-subtitle {
+  font-size: 0.84rem;
+  color: var(--text-400);
+  margin-top: 3px;
+  font-weight: 400;
+}
+
+/* ── Breadcrumb ── */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  color: var(--text-400);
+  margin-bottom: 6px;
+}
+.breadcrumb-sep { color: var(--border-dark); }
+.breadcrumb span:last-child { color: var(--text-700); font-weight: 600; }
+
+/* ── Section Heading ── */
+.section-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+.section-title {
+  font-size: clamp(1.5rem, 2.5vw, 2.2rem);
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  color: var(--text-900);
+}
+.section-sub {
+  font-size: 0.95rem;
+  color: var(--text-500);
+  line-height: 1.7;
+  margin-top: 10px;
+}
+.section-divider {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-400);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ============================================================
+   6. BRAND
+   ============================================================ */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  text-decoration: none;
+  user-select: none;
+}
+.brand-logo {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--primary), var(--teal));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-blue);
+  transition: transform var(--t) var(--ease);
+  flex-shrink: 0;
+}
+.brand-logo:hover { transform: scale(1.06); }
+.brand-logo svg   { width: 18px; height: 18px; fill: white; }
+
+.brand-name {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-900);
+  letter-spacing: -0.02em;
+}
+.brand-name span { color: var(--primary); }
+
+/* ============================================================
+   7. NAVIGATION
+   ============================================================ */
+
+/* ── Topbar nav tabs ── */
+.nav-tabs {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0 8px;
+}
+.nav-tabs::-webkit-scrollbar { display: none; }
+
+.nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: var(--radius);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-400);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  font-family: var(--font);
+  white-space: nowrap;
+  transition: color var(--t-fast) var(--ease),
+              background var(--t-fast) var(--ease);
+  position: relative;
+}
+.nav-tab svg { width: 14px; height: 14px; flex-shrink: 0; }
+.nav-tab:hover {
+  color: var(--primary);
+  background: var(--primary-light);
+}
+.nav-tab.active {
+  color: var(--primary);
+  background: var(--primary-light);
+  font-weight: 700;
+}
+.nav-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 26px;
+  height: 2.5px;
+  border-radius: var(--radius-full);
+  background: var(--primary);
+}
+
+/* ── Sidebar nav items ── */
+.sidebar-section {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-300);
+  padding: 14px 10px 5px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 2px;
+  border-radius: var(--radius);
+  font-size: 0.845rem;
+  font-weight: 500;
+  color: var(--text-700);
+  cursor: pointer;
+  transition: all var(--t-fast) var(--ease);
+  border: 1px solid transparent;
+  position: relative;
+  width: 100%;
+  text-align: left;
+}
+.nav-item svg        { width: 15px; height: 15px; flex-shrink: 0; }
+.nav-item:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+  border-color: rgba(10, 110, 189, 0.12);
+}
+.nav-item.active {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 700;
+  border-color: rgba(10, 110, 189, 0.2);
+  box-shadow: var(--shadow-xs);
+}
+/* Animated left accent on active item */
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 var(--radius-full) var(--radius-full) 0;
+  background: var(--primary);
+  animation: fadeRight var(--t-fast) var(--ease) both;
+}
+.nav-item-badge {
+  margin-left: auto;
+  background: var(--primary);
+  color: white;
+  font-size: 0.63rem;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+}
+.nav-item-badge.danger { background: var(--danger); }
+.nav-item-badge.warn   { background: var(--warning); }
+
+/* ============================================================
+   19. USER CHIP (Topbar)
+   ============================================================ */
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all var(--t-fast) var(--ease);
+  flex-shrink: 0;
+}
+.user-chip:hover { border-color: var(--border-dark); box-shadow: var(--shadow-sm); }
+.avatar {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-family: var(--font);
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+.user-chip-name { font-size: 0.8rem;  font-weight: 700; color: var(--text-700); }
+.user-chip-role { font-size: 0.67rem; color: var(--text-400); }
+
+/* ============================================================
+   APP SHELL  (added Step 6)
+   ============================================================ */
+
+/* ── Hamburger — only shows on mobile ── */
+.hamburger-btn { display: none; }
+.mobile-search-trigger-btn { display: none !important; }
+
+/* ── Topbar breadcrumb ── */
+.topbar-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-400);
+  margin-left: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.topbar-breadcrumb-current {
+  color: var(--text-700);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Topbar right group — always flush right ── */
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ── User chip inner layout ── */
+.user-chip-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+/* ── Sidebar role badge ── */
+.sidebar-role-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   24. MOBILE RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+  /* Hide sidebar — shown via JS toggle */
+  .sidebar { display: none; }
+  .sidebar.mobile-open {
+    display: flex;
+    position: fixed;
+    z-index: var(--z-sticky);
+    top: 58px;
+    left: 0;
+    bottom: 0;
+    width: 256px;
+    box-shadow: var(--shadow-xl);
+    animation: fadeRight var(--t) var(--ease) both;
+  }
+
+  /* Mobile overlay behind sidebar */
+  .mobile-overlay {
+    position: fixed;
+    inset: 0;
+    top: 58px;
+    background: rgba(10, 25, 50, 0.42);
+    z-index: calc(var(--z-sticky) - 1);
+    animation: fadeIn 150ms ease;
+  }
+
+  .main-area { padding: 14px; }
+
+  .grid-2col,
+  .grid-3col,
+  .grid-4col { grid-template-columns: 1fr; }
+
+  .page-title { font-size: 1.15rem; }
+
+  /* Hide tab labels on very small screens */
+  .nav-tab .tab-label { display: none; }
+
+  /* Toast full width on mobile */
+  .toast-stack { left: 12px; right: 12px; bottom: 12px; }
+  .toast { min-width: unset; max-width: unset; width: 100%; }
+
+  .hamburger-btn { display: flex; }
+  .topbar-breadcrumb { display: none; }
+
+  /* Mobile Search Overlay styling */
+  .global-search-container {
+    display: none !important;
+  }
+  .mobile-search-trigger-btn {
+    display: flex !important;
+  }
+  .mobile-search-overlay-container {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+  }
+  .mobile-search-overlay-container .global-search-container {
+    display: block !important;
+    flex: 1 !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar  { padding: 0 12px; }
+  .nav-tabs { padding: 0 2px; }
+
+  .modal {
+    padding: 20px;
+    border-radius: var(--radius-xl);
+    max-height: 95vh;
+  }
+
+  .form-row { grid-template-columns: 1fr; }
+
+  .btn-2xl { padding: 12px 24px; font-size: 0.95rem; }
+  .user-chip-info { display: none; }
+}
+
+.landing-section .section-sub     { max-width: 560px; margin: 0 auto; }

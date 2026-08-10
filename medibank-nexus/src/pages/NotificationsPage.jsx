@@ -216,19 +216,48 @@ export default function NotificationsPage() {
     channels: { push: true, sms: true, whatsapp: false, email: true },
   });
 
-  /* Load real notifications from API (falls back to mock if API fails) */
-  useEffect(() => {
-    api.get('/api/v1/notifications?limit=50')
-      .then(({ notifications }) => {
-        if (notifications?.length) {
-          setNotifs(notifications.map(normaliseNotif));
-        }
-      })
-      .catch(() => { /* keep mock data */ });
-  }, []);
+  const [page,        setPage]        = useState(1);
+  const [hasMore,     setHasMore]     = useState(true);
+  const [loading,     setLoading]     = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [totalCount,  setTotalCount]  = useState(0);
 
-  /* counts */
-  const unreadCount  = notifs.filter(n => !n.read).length;
+  const PAGE_SIZE = 20;
+
+  /* Load real notifications from API */
+  const loadNotifications = useCallback(async () => {
+    if (page === 1) {
+      setLoading(true);
+    } else {
+      setLoadingMore(true);
+    }
+    try {
+      const params = new URLSearchParams({ limit: PAGE_SIZE, page });
+      const data = await api.get(`/api/v1/notifications?${params}`);
+      const newNotifs = (data.notifications ?? []).map(normaliseNotif);
+      setNotifs(prev => page === 1 ? newNotifs : [...prev, ...newNotifs]);
+      setHasMore(newNotifs.length === PAGE_SIZE);
+      setUnreadCount(data.unreadCount ?? 0);
+      setTotalCount(data.total ?? 0);
+    } catch {
+      if (page === 1) {
+        setNotifs(INITIAL_NOTIFS);
+        setHasMore(false);
+        setUnreadCount(INITIAL_NOTIFS.filter(n => !n.read).length);
+        setTotalCount(INITIAL_NOTIFS.length);
+      }
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, [page]);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  /* client-calculated helper counts for loaded list */
   const highCount    = notifs.filter(n => !n.read && n.priority === 'high').length;
   const apptCount    = notifs.filter(n => !n.read && n.type === 'appointment').length;
 
@@ -245,15 +274,24 @@ export default function NotificationsPage() {
 
   /* actions */
   const markRead = (id) => {
+    const wasUnread = notifs.find(n => n.id === id && !n.read);
     setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    if (wasUnread) setUnreadCount(c => Math.max(0, c - 1));
     api.put(`/api/v1/notifications/${id}/read`).catch(() => {});
   };
   const deleteNotif = (id) => {
+    const target = notifs.find(n => n.id === id);
     setNotifs(prev => prev.filter(n => n.id !== id));
+    if (target) {
+      setTotalCount(c => Math.max(0, c - 1));
+      if (!target.read) setUnreadCount(c => Math.max(0, c - 1));
+    }
+    api.delete(`/api/v1/notifications/${id}`).catch(() => {});
     toast.success('Notification removed.');
   };
   const markAllRead = () => {
     setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+    setUnreadCount(0);
     api.put('/api/v1/notifications/read-all').catch(() => {});
     toast.success('All notifications marked as read.');
   };
@@ -288,7 +326,7 @@ export default function NotificationsPage() {
           { label: 'Unread',        value: unreadCount, color: 'var(--primary)' },
           { label: 'High Priority', value: highCount,   color: 'var(--danger)'  },
           { label: 'Appointments',  value: apptCount,   color: 'var(--teal)'    },
-          { label: 'Total',         value: notifs.length, color: 'var(--text-700)' },
+          { label: 'Total',         value: totalCount,  color: 'var(--text-700)' },
         ].map(s => (
           <div key={s.label} className="notif-stat-card">
             <div className="notif-stat-value" style={{ color: s.color }}>{s.value}</div>
@@ -373,6 +411,13 @@ export default function NotificationsPage() {
               ))
             )}
           </div>
+          {hasMore && notifs.length > 0 && (
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <button className="btn btn-outline btn-sm" onClick={() => setPage(p => p + 1)} disabled={loadingMore}>
+                {loadingMore ? 'Loading...' : 'Load More'}
+              </button>
+            </div>
+          )}
         </>
       )}
 

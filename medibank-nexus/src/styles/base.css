@@ -1,0 +1,551 @@
+/* ============================================================
+   MEDIBANK NEXUS — GLOBAL DESIGN SYSTEM
+   Clinical White · Hospital Blue · Medical Green
+   Font: Plus Jakarta Sans (headings + body) · DM Mono (code)
+   ============================================================ */
+
+/* ── GOOGLE FONTS ── */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');
+
+/* ============================================================
+   1. CSS CUSTOM PROPERTIES (Design Tokens)
+   ============================================================ */
+:root {
+  /* ── Palette: Whites & Surfaces ── */
+  --white:        #ffffff;
+  --bg:           #f0f5fa;
+  --surface:      #ffffff;
+  --surface-2:    #f4f8fc;
+  --surface-3:    #eaf0f7;
+
+  /* ── Palette: Hospital Blue ── */
+  --blue-50:      #e8f2fb;
+  --blue-100:     #cce0f5;
+  --blue-200:     #99c2eb;
+  --blue-400:     #4d9de0;
+  --blue-500:     #1a7fd4;
+  --blue-600:     #0a6ebd;   /* ← primary brand */
+  --blue-700:     #085faa;
+  --blue-800:     #064d8c;
+  --blue-900:     #043a6e;
+
+  --primary:      #0a6ebd;
+  --primary-dark: #085faa;
+  --primary-light:#e8f2fb;
+
+  /* ── Palette: Medical Green / Teal ── */
+  --teal-50:      #e0f7f4;
+  --teal-100:     #b3ece6;
+  --teal-400:     #26c0ae;
+  --teal-600:     #0d9488;   /* ← teal brand */
+  --teal-800:     #096b62;
+
+  --teal:         #0d9488;
+  --teal-light:   #e0f7f4;
+
+  /* ── Palette: Status ── */
+  --success:       #059669;
+  --success-light: #ecfdf5;
+  --success-dark:  #047857;
+
+  --warning:       #d97706;
+  --warning-light: #fffbeb;
+  --warning-dark:  #b45309;
+
+  --danger:        #dc2626;
+  --danger-light:  #fef2f2;
+  --danger-dark:   #b91c1c;
+
+  --info:          #0891b2;
+  --info-light:    #ecfeff;
+
+  /* ── Typography ── */
+  --font:       'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono:  'DM Mono', 'Fira Mono', monospace;
+
+  /* ── Text Colors ── */
+  --text-900:   #0f1923;
+  --text-700:   #1e3148;
+  --text-500:   #4a6580;
+  --text-400:   #7a97b0;
+  --text-300:   #aabfce;
+
+  /* ── Borders ── */
+  --border:       #d0dde8;
+  --border-dark:  #a8bfcf;
+  --border-focus: #0a6ebd;
+
+  /* ── Shadows ── */
+  --shadow-xs: 0 1px 2px rgba(10, 40, 80, 0.05);
+  --shadow-sm: 0 1px 3px rgba(10, 40, 80, 0.08),
+               0 1px 2px rgba(10, 40, 80, 0.05);
+  --shadow-md: 0 4px 8px rgba(10, 40, 80, 0.08),
+               0 2px 4px rgba(10, 40, 80, 0.05);
+  --shadow-lg: 0 10px 20px rgba(10, 40, 80, 0.09),
+               0 4px 8px  rgba(10, 40, 80, 0.05);
+  --shadow-xl: 0 20px 40px rgba(10, 40, 80, 0.10),
+               0 8px  16px rgba(10, 40, 80, 0.06);
+  --shadow-blue: 0 4px 14px rgba(10, 110, 189, 0.22);
+
+  /* ── Border Radius ── */
+  --radius-sm:   4px;
+  --radius:      8px;
+  --radius-md:   10px;
+  --radius-lg:   14px;
+  --radius-xl:   18px;
+  --radius-2xl:  24px;
+  --radius-full: 9999px;
+
+  /* ── Transitions ── */
+  --ease:       cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast:     120ms;
+  --t:          200ms;
+  --t-slow:     360ms;
+
+  /* ── Spacing Scale ── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ── Z-Index Scale ── */
+  --z-base:    1;
+  --z-raised:  10;
+  --z-dropdown:100;
+  --z-sticky:  200;
+  --z-modal:   400;
+  --z-toast:   500;
+}
+
+/* ============================================================
+   2. RESET & BASE
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text-900);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--surface-3); }
+::-webkit-scrollbar-thumb {
+  background: var(--border-dark);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-400); }
+
+/* ── Selection ── */
+::selection {
+  background: var(--blue-100);
+  color: var(--blue-800);
+}
+
+/* ── Focus visible ── */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) { outline: none; }
+
+/* ── Links ── */
+a {
+  color: var(--primary);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+/* ── Images ── */
+img, svg { display: block; max-width: 100%; }
+
+/* ── Headings ── */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: var(--text-900);
+}
+h1 { font-size: 2.25rem; }
+h2 { font-size: 1.75rem; }
+h3 { font-size: 1.35rem; }
+h4 { font-size: 1.1rem; }
+
+/* ── Paragraphs ── */
+p { line-height: 1.7; color: var(--text-500); }
+
+/* ── HR ── */
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: var(--space-6) 0;
+}
+
+/* ============================================================
+   3. KEYFRAME ANIMATIONS
+   ============================================================ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0);     }
+}
+@keyframes fadeLeft {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+@keyframes fadeRight {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.93); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+@keyframes scaleUp {
+  from { opacity: 0; transform: scale(0.85) translateY(12px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+/* Continuous animations */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1;   }
+  50%       { opacity: 0.4; }
+}
+@keyframes pulseSlow {
+  0%, 100% { transform: scale(1);    opacity: 0.7; }
+  50%       { transform: scale(1.06); opacity: 1;   }
+}
+@keyframes bounce {
+  0%, 100% { transform: translateY(0);   }
+  50%       { transform: translateY(-6px); }
+}
+@keyframes shimmer {
+  from { background-position: -200% 0;  }
+  to   { background-position:  200% 0; }
+}
+
+/* Micro-interactions */
+@keyframes ripple {
+  from { transform: scale(0);   opacity: 0.6; }
+  to   { transform: scale(4);   opacity: 0;   }
+}
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 0 0   rgba(10, 110, 189, 0);    }
+  50%       { box-shadow: 0 0 0 6px rgba(10, 110, 189, 0.14); }
+}
+@keyframes progressBar {
+  from { width: 0; }
+  to   { width: var(--progress-target, 100%); }
+}
+@keyframes countUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* Toast */
+@keyframes toastSlideIn {
+  from { opacity: 0; transform: translateX(110%); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+@keyframes toastSlideOut {
+  from { opacity: 1; transform: translateX(0);     }
+  to   { opacity: 0; transform: translateX(110%);  }
+}
+
+/* Typing dots */
+@keyframes typingDot {
+  0%, 100% { opacity: 0.2; transform: translateY(0);    }
+  50%       { opacity: 1;   transform: translateY(-3px); }
+}
+
+/* Stat card accent bar */
+@keyframes accentGrow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* ============================================================
+   4. ANIMATION UTILITY CLASSES
+   ============================================================ */
+.anim-fade-in    { animation: fadeIn    var(--t)      var(--ease) both; }
+.anim-fade-up    { animation: fadeUp    var(--t-slow) var(--ease) both; }
+.anim-fade-down  { animation: fadeDown  var(--t)      var(--ease) both; }
+.anim-fade-right { animation: fadeRight var(--t)      var(--ease) both; }
+.anim-scale-in   { animation: scaleIn   var(--t)      var(--ease) both; }
+.anim-scale-up   { animation: scaleUp   var(--t-slow) var(--ease) both; }
+
+/* Staggered delays */
+.anim-d1 { animation-delay:  60ms; }
+.anim-d2 { animation-delay: 120ms; }
+.anim-d3 { animation-delay: 180ms; }
+.anim-d4 { animation-delay: 240ms; }
+.anim-d5 { animation-delay: 300ms; }
+.anim-d6 { animation-delay: 360ms; }
+.anim-d7 { animation-delay: 420ms; }
+.anim-d8 { animation-delay: 480ms; }
+
+/* ============================================================
+   5. UTILITY CLASSES
+   ============================================================ */
+.flex             { display: flex; }
+.flex-col         { display: flex; flex-direction: column; }
+.items-center     { align-items: center; }
+.items-start      { align-items: flex-start; }
+.items-end        { align-items: flex-end; }
+.justify-center   { justify-content: center; }
+.justify-between  { justify-content: space-between; }
+.justify-end      { justify-content: flex-end; }
+.flex-wrap        { flex-wrap: wrap; }
+.flex-1           { flex: 1; }
+.flex-shrink-0    { flex-shrink: 0; }
+
+.gap-1  { gap: 4px;  }
+.gap-2  { gap: 8px;  }
+.gap-3  { gap: 12px; }
+.gap-4  { gap: 16px; }
+.gap-6  { gap: 24px; }
+
+.mt-1 { margin-top: 4px;  }
+.mt-2 { margin-top: 8px;  }
+.mt-3 { margin-top: 12px; }
+.mt-4 { margin-top: 16px; }
+.mt-6 { margin-top: 24px; }
+.mt-8 { margin-top: 32px; }
+
+.mb-2 { margin-bottom: 8px;  }
+.mb-3 { margin-bottom: 12px; }
+.mb-4 { margin-bottom: 16px; }
+.mb-6 { margin-bottom: 24px; }
+
+.ml-auto { margin-left: auto; }
+.mr-auto { margin-right: auto; }
+
+.text-center   { text-align: center; }
+.text-right    { text-align: right; }
+.text-muted    { color: var(--text-400); }
+.text-small    { font-size: 0.82rem; }
+.text-xs       { font-size: 0.73rem; }
+.text-mono     { font-family: var(--font-mono); }
+.font-medium   { font-weight: 600; }
+.font-bold     { font-weight: 700; }
+.font-black    { font-weight: 900; }
+.text-primary  { color: var(--primary); }
+.text-success  { color: var(--success); }
+.text-danger   { color: var(--danger);  }
+.text-warning  { color: var(--warning); }
+.truncate      { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.w-full  { width: 100%;  }
+.h-full  { height: 100%; }
+
+.overflow-x-auto   { overflow-x: auto; }
+.overflow-hidden   { overflow: hidden; }
+
+.cursor-pointer { cursor: pointer; }
+
+.rounded-full { border-radius: var(--radius-full); }
+
+.shadow-sm { box-shadow: var(--shadow-sm); }
+.shadow-md { box-shadow: var(--shadow-md); }
+
+/* ============================================================
+   6. DARK MODE — [data-theme="dark"]
+   ============================================================ */
+[data-theme="dark"] {
+  --bg:           #0f1923;
+  --surface:      #162130;
+  --surface-2:    #1c2b3a;
+  --surface-3:    #22334a;
+
+  --text-900:     #e8f2fb;
+  --text-700:     #b8cfe4;
+  --text-500:     #7a97b0;
+  --text-400:     #506a82;
+  --text-300:     #334d62;
+
+  --border:       #243547;
+  --border-dark:  #2e4259;
+  --border-focus: #4d9de0;
+
+  --primary:      #4d9de0;
+  --primary-dark: #3a8acc;
+  --primary-light:#162a3e;
+
+  --teal:         #26c0ae;
+  --teal-light:   #0d2926;
+
+  --success-light: #0a2318;
+  --warning-light: #241a06;
+  --danger-light:  #230a0a;
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.25);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
+  --shadow-md: 0 4px 8px rgba(0,0,0,0.30), 0 2px 4px rgba(0,0,0,0.20);
+  --shadow-lg: 0 10px 20px rgba(0,0,0,0.30), 0 4px 8px rgba(0,0,0,0.20);
+}
+
+[data-theme="dark"] html,
+[data-theme="dark"] body,
+[data-theme="dark"] #root {
+  background: var(--bg);
+  color: var(--text-900);
+}
+
+[data-theme="dark"] .topbar,
+[data-theme="dark"] .sidebar {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .input,
+[data-theme="dark"] .select,
+[data-theme="dark"] .textarea {
+  background: var(--surface-2);
+  border-color: var(--border);
+  color: var(--text-900);
+}
+
+[data-theme="dark"] .btn-outline {
+  border-color: var(--border-dark);
+  color: var(--text-700);
+  background: var(--surface-2);
+}
+
+[data-theme="dark"] .btn-outline:hover {
+  background: var(--surface-3);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+[data-theme="dark"] .dropdown-menu {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .nav-item:hover,
+[data-theme="dark"] .dropdown-item:hover {
+  background: var(--surface-2);
+}
+
+[data-theme="dark"] .nav-item.active {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+[data-theme="dark"] .card {
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+[data-theme="dark"] .welcome-card {
+  background: linear-gradient(135deg, #0a3558 0%, #0d5c52 100%);
+}
+
+/* ============================================================
+   7. PRINT STYLES
+   ============================================================ */
+@media print {
+  .sidebar,
+  .topbar,
+  .page-header .btn,
+  .tour-tooltip,
+  .toast-stack,
+  .btn-group-print-hide,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  body, html {
+    background: white !important;
+    font-size: 12pt;
+    color: black !important;
+  }
+
+  .print-page {
+    page-break-after: always;
+    padding: 16mm;
+  }
+
+  .rx-print-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #000;
+    padding-bottom: 8pt;
+    margin-bottom: 12pt;
+  }
+  .rx-print-hospital-name { font-size: 16pt; font-weight: bold; }
+  .rx-print-patient-info  { font-size: 11pt; margin-bottom: 10pt; }
+  .rx-print-items         { width: 100%; border-collapse: collapse; }
+  .rx-print-items th, .rx-print-items td {
+    border: 1px solid #ccc;
+    padding: 5pt 8pt;
+    font-size: 10pt;
+  }
+  .rx-print-items th { background: #f0f0f0; font-weight: bold; }
+  .rx-print-footer {
+    margin-top: 20pt;
+    border-top: 1px solid #ccc;
+    padding-top: 10pt;
+    font-size: 9pt;
+    color: #555;
+  }
+  .rx-print-signature-line {
+    margin-top: 30pt;
+    border-top: 1px solid black;
+    display: inline-block;
+    width: 200pt;
+    font-size: 9pt;
+    color: #555;
+  }
+
+  .invoice-print-header {
+    text-align: center;
+    margin-bottom: 14pt;
+  }
+  .invoice-print-table    { width: 100%; border-collapse: collapse; }
+  .invoice-print-table th, .invoice-print-table td {
+    border: 1px solid #ccc;
+    padding: 5pt 8pt;
+    font-size: 10pt;
+  }
+  .invoice-print-total {
+    text-align: right;
+    font-size: 14pt;
+    font-weight: bold;
+    margin-top: 10pt;
+  }
+}

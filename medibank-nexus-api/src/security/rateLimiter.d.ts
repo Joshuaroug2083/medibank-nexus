@@ -1,0 +1,5 @@
+export declare const generalLimiter: import("express-rate-limit").RateLimitRequestHandler;
+export declare const authLimiter: import("express-rate-limit").RateLimitRequestHandler;
+export declare const strictLimiter: import("express-rate-limit").RateLimitRequestHandler;
+export declare const aiLimiter: import("express-rate-limit").RateLimitRequestHandler;
+export declare function attachRedisStores(): Promise<void>;

@@ -14,14 +14,25 @@ import { isBlacklisted, getUserRevocationTime } from '../security/tokenBlacklist
 export default async function authenticate(req, res, next) {
   const header = req.headers.authorization;
 
-  if (!header?.startsWith('Bearer ')) {
+  /*
+   * Token extraction order:
+   *  1. Authorization: Bearer <token>  (standard, all API calls)
+   *  2. ?token=<token>                 (SSE fallback — EventSource can't set headers)
+   *
+   * The query-param fallback is intentionally restricted to GET requests only
+   * to prevent token leakage in server logs from write operations.
+   */
+  let token;
+  if (header?.startsWith('Bearer ')) {
+    token = header.split(' ')[1];
+  } else if (req.method === 'GET' && req.query.token) {
+    token = req.query.token;
+  } else {
     return res.status(401).json({
       error: 'Authentication required',
       hint:  'Provide a valid Bearer token in the Authorization header',
     });
   }
-
-  const token = header.split(' ')[1];
 
   /* ── 1. Verify signature + expiry ─────────────────────────── */
   let payload;

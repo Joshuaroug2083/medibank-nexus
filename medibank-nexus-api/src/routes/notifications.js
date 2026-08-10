@@ -1,6 +1,7 @@
 import { Router }  from 'express';
 import db           from '../db.js';
 import authenticate from '../middleware/auth.js';
+import { broadcast } from './sse.js';
 
 const router = Router();
 router.use(authenticate);
@@ -60,6 +61,30 @@ router.put('/read-all', async (req, res, next) => {
       .where(function() { this.where({ user_id: req.user.id }).orWhereNull('user_id'); })
       .update({ read: true });
     return res.json({ message: 'All notifications marked as read' });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ── POST /api/v1/notifications ─────────────────────────────── */
+/* Creates a notification and optionally broadcasts via SSE.     */
+router.post('/', async (req, res, next) => {
+  try {
+    const { userId, type, title, message } = req.body;
+    const [row] = await db('notifications').insert({
+      hospital_id: req.hospitalId,
+      user_id:     userId ?? null,
+      type:        type    ?? 'info',
+      title:       title   ?? 'Notification',
+      message:     message ?? '',
+      read:        false,
+      created_at:  new Date(),
+    }).returning('*');
+
+    /* Push to connected SSE clients */
+    broadcast(req.hospitalId, { type: 'notification', data: row }, userId ?? null);
+
+    return res.status(201).json({ notification: row });
   } catch (err) {
     next(err);
   }

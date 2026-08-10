@@ -4,10 +4,10 @@ import authenticate from '../middleware/auth.js';
 import { allow }    from '../middleware/rbac.js';
 
 const router = Router();
-router.use(authenticate, allow('admin'));
+router.use(authenticate);
 
 /* ── GET /api/v1/analytics/summary ─────────────────────────── */
-router.get('/summary', async (req, res, next) => {
+router.get('/summary', allow('admin', 'doctor', 'nurse', 'pharmacist'), async (req, res, next) => {
   try {
     const hid = req.hospitalId;
 
@@ -74,7 +74,7 @@ router.get('/summary', async (req, res, next) => {
 });
 
 /* ── GET /api/v1/analytics/audit-log ──────────────────────────── */
-router.get('/audit-log', async (req, res, next) => {
+router.get('/audit-log', allow('admin'), async (req, res, next) => {
   try {
     const { page = 1, limit = 50 } = req.query;
     const offset = (page - 1) * limit;

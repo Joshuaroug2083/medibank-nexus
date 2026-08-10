@@ -19,21 +19,25 @@ import {
   IcStar, IcStarFill, IcDownload,
 } from '../components/Icons';
 
-/* ── CSV export helper ── */
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
-function downloadExport(endpoint, filename) {
-  const token = localStorage.getItem('nexus_token') ?? '';
-  fetch(`${API_BASE}/api/v1/export/${endpoint}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  })
-    .then(r => r.blob())
-    .then(blob => {
-      const url = URL.createObjectURL(blob);
-      const a   = document.createElement('a');
-      a.href = url; a.download = filename; a.click();
-      URL.revokeObjectURL(url);
-    })
-    .catch(() => alert('Export failed. Please try again.'));
+/* ── CSV export helper ─────────────────────────────────────── */
+
+/**
+ * Trigger a CSV download from the export API.
+ * Uses the shared api.download helper to ensure 401 refresh logic applies.
+ */
+async function downloadExport(endpoint, filename) {
+  try {
+    const blob = await api.download(`/api/v1/export/${endpoint}`);
+    const url  = URL.createObjectURL(blob);
+    const a    = Object.assign(document.createElement('a'), { href: url, download: filename });
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('[Export] Failed:', err);
+    alert(`Export failed: ${err.message}. Please try again.`);
+  }
 }
 
 /* ── mock data ───────────────────────────────────────────── */

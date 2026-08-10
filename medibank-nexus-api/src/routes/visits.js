@@ -3,6 +3,7 @@ import db           from '../db.js';
 import authenticate from '../middleware/auth.js';
 import { allow }    from '../middleware/rbac.js';
 import { audit }    from '../middleware/audit.js';
+import { filterVisit } from '../security/dataFilter.js';
 
 const router = Router();
 router.use(authenticate);
@@ -49,7 +50,8 @@ router.get('/', async (req, res, next) => {
     const [{ count }] = await query.clone().count('v.id as count');
     const visits = await query.orderBy('v.created_at','desc').limit(limit).offset(offset);
 
-    return res.json({ visits, total: parseInt(count), page: +page, limit: +limit });
+    const filtered = visits.map(v => filterVisit(v, req.user.role));
+    return res.json({ visits: filtered, total: parseInt(count), page: +page, limit: +limit });
   } catch (err) {
     next(err);
   }
@@ -83,7 +85,8 @@ router.post('/', allow('doctor'), async (req, res, next) => {
 
     audit({ userId: req.user.id, hospitalId: req.hospitalId, action: 'create_visit', entity: 'visit', entityId: id });
 
-    return res.status(201).json({ visit });
+    const filtered = filterVisit(visit, req.user.role);
+    return res.status(201).json({ visit: filtered });
   } catch (err) {
     next(err);
   }
@@ -117,7 +120,8 @@ router.get('/:id', async (req, res, next) => {
       rx.items = await db('prescription_items').where({ rx_id: rx.id });
     }
 
-    return res.json({ visit, prescriptions });
+    const filtered = filterVisit(visit, req.user.role);
+    return res.json({ visit: filtered, prescriptions });
   } catch (err) {
     next(err);
   }
@@ -133,7 +137,8 @@ router.put('/:id', allow('doctor'), async (req, res, next) => {
     const patch = Object.fromEntries(Object.entries(req.body).filter(([k]) => allowed.includes(k)));
 
     const [updated] = await db('visits').where({ id: req.params.id }).update({ ...patch, updated_at: new Date() }).returning('*');
-    return res.json({ visit: updated });
+    const filtered = filterVisit(updated, req.user.role);
+    return res.json({ visit: filtered });
   } catch (err) {
     next(err);
   }

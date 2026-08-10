@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS formulary (
   id            SERIAL PRIMARY KEY,
-  hospital_id   TEXT        NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
+  hospital_id   UUID        NOT NULL REFERENCES hospitals(id) ON DELETE CASCADE,
   name          TEXT        NOT NULL,
   generic       TEXT,
   category      TEXT        NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS formulary (
   stock         INTEGER     NOT NULL DEFAULT 0,
   reorder_level INTEGER     NOT NULL DEFAULT 100,
   status        TEXT        NOT NULL DEFAULT 'active' CHECK (status IN ('active','inactive')),
-  created_by    TEXT        REFERENCES users(id) ON DELETE SET NULL,
+  created_by    UUID        REFERENCES users(id) ON DELETE SET NULL,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

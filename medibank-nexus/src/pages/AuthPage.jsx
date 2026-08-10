@@ -299,42 +299,46 @@ export default function AuthPage({ onSuccess, onRegisterHospital, loginRole }) {
           <div className="auth-card">
 
             {/* ── QUICK LOGIN GRID ── */}
-            <div className="quick-login-label">
-              Quick demo login
-              {loginRole === 'patient' && <span style={{ marginLeft: 8, fontSize: '.72rem', color: 'var(--teal)', fontWeight: 700 }}>— Patient</span>}
-              {loginRole === 'staff'   && <span style={{ marginLeft: 8, fontSize: '.72rem', color: 'var(--primary)', fontWeight: 700 }}>— Staff</span>}
-            </div>
-            <div className="quick-login-grid">
-              {MOCK_USERS.filter(u => {
-                if (loginRole === 'patient') return u.role === 'patient';
-                if (loginRole === 'staff')   return u.role !== 'patient';
-                return true;
-              }).map(u => {
-                const cfg = ROLE_CONFIG[u.role];
-                return (
-                  <button
-                    key={u.id}
-                    className="quick-btn"
-                    onClick={() => handleQuickLogin(u)}
-                    disabled={loading}
-                    title={`Login as ${u.name}`}
-                    style={{ '--role-color': cfg.color, '--role-bg': cfg.bg }}
-                  >
-                    <span className="quick-btn-icon" style={{ color: cfg.color }}>
-                      {ROLE_ICONS[u.role]}
-                    </span>
-                    <span className="quick-btn-label">{cfg.label}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {import.meta.env.DEV && (
+              <>
+                <div className="quick-login-label">
+                  Quick demo login
+                  {loginRole === 'patient' && <span style={{ marginLeft: 8, fontSize: '.72rem', color: 'var(--teal)', fontWeight: 700 }}>— Patient</span>}
+                  {loginRole === 'staff'   && <span style={{ marginLeft: 8, fontSize: '.72rem', color: 'var(--primary)', fontWeight: 700 }}>— Staff</span>}
+                </div>
+                <div className="quick-login-grid">
+                  {MOCK_USERS.filter(u => {
+                    if (loginRole === 'patient') return u.role === 'patient';
+                    if (loginRole === 'staff')   return u.role !== 'patient';
+                    return true;
+                  }).map(u => {
+                    const cfg = ROLE_CONFIG[u.role];
+                    return (
+                      <button
+                        key={u.id}
+                        className="quick-btn"
+                        onClick={() => handleQuickLogin(u)}
+                        disabled={loading}
+                        title={`Login as ${u.name}`}
+                        style={{ '--role-color': cfg.color, '--role-bg': cfg.bg }}
+                      >
+                        <span className="quick-btn-icon" style={{ color: cfg.color }}>
+                          {ROLE_ICONS[u.role]}
+                        </span>
+                        <span className="quick-btn-label">{cfg.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
 
-            {/* ── DIVIDER ── */}
-            <div className="auth-divider">
-              <span className="auth-divider-line" />
-              <span className="auth-divider-text">or sign in manually</span>
-              <span className="auth-divider-line" />
-            </div>
+                {/* ── DIVIDER ── */}
+                <div className="auth-divider">
+                  <span className="auth-divider-line" />
+                  <span className="auth-divider-text">or sign in manually</span>
+                  <span className="auth-divider-line" />
+                </div>
+              </>
+            )}
 
             {/* ── LOGIN FORM ── */}
             <form onSubmit={handleSubmit} noValidate>

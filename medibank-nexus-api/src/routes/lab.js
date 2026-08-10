@@ -11,6 +11,8 @@ import db           from '../db.js';
 import authenticate from '../middleware/auth.js';
 import { allow }    from '../middleware/rbac.js';
 import { audit }    from '../middleware/audit.js';
+import { decrypt, mask } from '../security/encryption.js';
+import { getPatientIdForUser } from './patients.js';
 
 const router = Router();
 router.use(authenticate);
@@ -38,7 +40,7 @@ router.get('/orders', async (req, res, next) => {
       .select(
         'lo.id', 'lo.patient_id', 'lo.visit_id', 'lo.status', 'lo.priority',
         'lo.ordered_at', 'lo.notes', 'lo.updated_at',
-        'p.name as patient_name', 'p.phone as patient_phone',
+        db.raw("p.first_name || ' ' || p.last_name as patient_name"), 'p.phone as patient_phone',
         'u.name as ordered_by_name',
       )
       .orderBy('lo.ordered_at', 'desc')
@@ -52,18 +54,32 @@ router.get('/orders', async (req, res, next) => {
     if (q) {
       const term = `%${q.toLowerCase()}%`;
       query = query.where(function() {
-        this.whereRaw('lower(p.name) like ?', [term])
+        this.whereRaw("lower(p.first_name || ' ' || p.last_name) like ?", [term])
             .orWhereRaw('lower(lo.id) like ?', [term]);
       });
     }
 
     /* Restrict patient role to own orders */
     if (req.user.role === 'patient') {
-      const pt = await db('patients').where({ hospital_id: req.hospitalId, user_id: req.user.id }).first();
-      if (pt) query = query.where('lo.patient_id', pt.id);
+      const ptId = await getPatientIdForUser(req.user.id, req.user.email, req.hospitalId);
+      if (ptId) {
+        query = query.where('lo.patient_id', ptId);
+      } else {
+        query = query.whereRaw('1=0');
+      }
     }
 
     const orders = await query;
+
+    // Decrypt and mask phone based on role
+    for (const o of orders) {
+      if (o.patient_phone) {
+        const decryptedPhone = decrypt(o.patient_phone);
+        o.patient_phone = req.user.role === 'pharmacist'
+          ? (decryptedPhone ? mask(decryptedPhone.replace(/\s/g,''), 4) : null)
+          : decryptedPhone;
+      }
+    }
 
     /* Attach test list to each order */
     const ids = orders.map(o => o.id);
@@ -133,10 +149,18 @@ router.get('/orders/:id', async (req, res, next) => {
       .join('users as u',    'lo.ordered_by',  'u.id')
       .where('lo.id', req.params.id)
       .where('lo.hospital_id', req.hospitalId)
-      .select('lo.*', 'p.name as patient_name', 'u.name as ordered_by_name')
+      .select('lo.*', db.raw("p.first_name || ' ' || p.last_name as patient_name"), 'u.name as ordered_by_name')
       .first();
 
     if (!order) return res.status(404).json({ error: 'Lab order not found' });
+
+    /* Restrict patient role to own orders */
+    if (req.user.role === 'patient') {
+      const ptId = await getPatientIdForUser(req.user.id, req.user.email, req.hospitalId);
+      if (!ptId || order.patient_id !== ptId) {
+        return res.status(403).json({ error: 'Access denied' });
+      }
+    }
     const tests = await db('lab_tests').where({ order_id: order.id }).orderBy('id');
     return res.json({ order: { ...order, tests } });
   } catch (err) { next(err); }

@@ -140,8 +140,13 @@ export function AuthProvider({ children }) {
 
     } catch {
       /* Network error — fall back to mock login in development */
-      console.warn('[Auth] API unreachable — using mock login (dev mode)');
-      return _mockLogin(email, password);
+      if (import.meta.env.DEV) {
+        console.warn('[Auth] API unreachable — using mock login (dev mode)');
+        return _mockLogin(email, password);
+      }
+      setLoginError('Server is currently unreachable. Please try again later.');
+      setLoading(false);
+      return { success: false };
     }
   };
 
@@ -210,6 +215,7 @@ export function AuthProvider({ children }) {
     /* Attempt to blacklist the token server-side */
     try {
       const token = getAccessToken();
+      const refresh = localStorage.getItem(REFRESH_KEY);
       if (token) {
         await fetch(`${API_BASE}/api/v1/auth/logout`, {
           method:  'POST',
@@ -217,6 +223,7 @@ export function AuthProvider({ children }) {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
+          body: JSON.stringify({ refreshToken: refresh }),
         });
       }
     } catch { /* ignore */ }
